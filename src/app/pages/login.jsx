@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Mail, Lock, Eye, EyeOff, GraduationCap } from "lucide-react";
 import { useState } from "react";
@@ -9,6 +9,18 @@ import { Checkbox } from "../components/ui/checkbox";
 
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const namePart = email.split("@")[0] || "Student";
+    const name = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+    const user = { email, name, enrolledCourses: [], courseProgress: {} };
+    localStorage.setItem("user", JSON.stringify(user));
+    navigate("/dashboard");
+  }
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
@@ -33,7 +45,7 @@ export function LoginPage() {
             </p>
           </div>
 
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email address</Label>
@@ -44,6 +56,8 @@ export function LoginPage() {
                     type="email"
                     placeholder="you@example.com"
                     className="pl-10"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
               </div>
@@ -65,6 +79,8 @@ export function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     className="pl-10 pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
 
                   <button
