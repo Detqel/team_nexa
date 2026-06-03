@@ -9,6 +9,9 @@ import { AdminDashboard } from "./pages/admin-dashboard";
 import { LoginPage } from "./pages/login";
 import { RegisterPage } from "./pages/register";
 import { CoursesPage } from "./pages/courses";
+import { MessagesPage } from "./pages/messages";
+import { NotificationsPage } from "./pages/notifications";
+import { SettingsPage } from "./pages/settings";
 import { Toaster } from "./components/ui/sonner";
 
 export default function App() {
@@ -21,6 +24,8 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
 
           {/* Dashboard Routes (No Header/Footer) */}
+          <Route path="/dashboard/messages" element={<MessagesPage />} />
+          <Route path="/dashboard/notifications" element={<NotificationsPage />} />
           <Route path="/dashboard" element={<StudentDashboard />} />
           <Route path="/dashboard/*" element={<StudentDashboard />} />
           <Route path="/instructor/*" element={<InstructorDashboard />} />
@@ -40,7 +45,7 @@ export default function App() {
                     <Route path="/instructors" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Instructors</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
                     <Route path="/about" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">About Us</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
                     <Route path="/contact" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Contact</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
-                    <Route path="/settings" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Settings</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
+                    <Route path="/settings" element={<SettingsPage />} />
                   </Routes>
                 </main>
                 <Footer />
