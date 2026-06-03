@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import {
   BookOpen,
   Award,
@@ -54,17 +54,18 @@ import {
 } from "recharts";
 
 export function StudentDashboard() {
+  const location = useLocation();
   const menuItems = [
-    { icon: BarChart3, label: "Dashboard", href: "/dashboard", active: true },
-    { icon: BookOpen, label: "My Courses", href: "/dashboard/my-courses" },
-    { icon: Heart, label: "Wishlist", href: "/dashboard/wishlist" },
-    { icon: Award, label: "Certificates", href: "/dashboard/certificates" },
-    { icon: FileText, label: "Assignments", href: "/dashboard/assignments" },
-    { icon: Trophy, label: "Quiz", href: "/dashboard/quiz" },
-    { icon: Target, label: "Progress Tracking", href: "/dashboard/progress" },
-    { icon: MessageSquare, label: "Messages", href: "/dashboard/messages" },
-    { icon: Bell, label: "Notifications", href: "/dashboard/notifications" },
-    { icon: Settings, label: "Settings", href: "/settings" },
+    { icon: BarChart3, label: "Dashboard", href: "/dashboard", active: location.pathname === "/dashboard" },
+    { icon: BookOpen, label: "My Courses", href: "/dashboard/my-courses", active: location.pathname === "/dashboard/my-courses" },
+    { icon: Heart, label: "Wishlist", href: "/dashboard/wishlist", active: location.pathname === "/dashboard/wishlist" },
+    { icon: Award, label: "Certificates", href: "/dashboard/certificates", active: location.pathname === "/dashboard/certificates" },
+    { icon: FileText, label: "Assignments", href: "/dashboard/assignments", active: location.pathname === "/dashboard/assignments" },
+    { icon: Trophy, label: "Quiz", href: "/dashboard/quiz", active: location.pathname === "/dashboard/quiz" },
+    { icon: Target, label: "Progress Tracking", href: "/dashboard/progress", active: location.pathname === "/dashboard/progress" },
+    { icon: MessageSquare, label: "Messages", href: "/dashboard/messages", active: location.pathname === "/dashboard/messages" },
+    { icon: Bell, label: "Notifications", href: "/dashboard/notifications", active: location.pathname === "/dashboard/notifications" },
+    { icon: Settings, label: "Settings", href: "/settings", active: location.pathname === "/settings" },
   ];
 
   const stats = [

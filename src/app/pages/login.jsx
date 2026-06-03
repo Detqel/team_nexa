@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Mail, Lock, Eye, EyeOff, GraduationCap } from "lucide-react";
 import { useState } from "react";
@@ -9,6 +9,12 @@ import { Checkbox } from "../components/ui/checkbox";
 
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    navigate("/dashboard");
+  };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
@@ -33,7 +39,7 @@ export function LoginPage() {
             </p>
           </div>
 
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email address</Label>
