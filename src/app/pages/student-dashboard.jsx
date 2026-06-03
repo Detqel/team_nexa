@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import {
   BookOpen,
   Award,
@@ -54,8 +54,9 @@ import {
 } from "recharts";
 
 export function StudentDashboard() {
+  const location = useLocation();
   const menuItems = [
-    { icon: BarChart3, label: "Dashboard", href: "/dashboard", active: true },
+    { icon: BarChart3, label: "Dashboard", href: "/dashboard" },
     { icon: BookOpen, label: "My Courses", href: "/dashboard/my-courses" },
     { icon: Heart, label: "Wishlist", href: "/dashboard/wishlist" },
     { icon: Award, label: "Certificates", href: "/dashboard/certificates" },
@@ -211,7 +212,7 @@ export function StudentDashboard() {
                 <SidebarMenu>
                   {menuItems.map((item) => (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={item.active}>
+                      <SidebarMenuButton asChild isActive={location.pathname === item.href}>
                         <Link
                           to={item.href}
                           className="flex items-center gap-3"
@@ -356,6 +357,49 @@ export function StudentDashboard() {
                     </div>
                   ))}
                 </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Access */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="group hover:shadow-lg transition-all cursor-pointer border-2 hover:border-primary/40">
+                <Link to="/dashboard/my-courses">
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500">
+                      <BookOpen className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold group-hover:text-primary transition-colors">My Courses</p>
+                      <p className="text-xs text-muted-foreground">12 enrolled courses</p>
+                    </div>
+                  </CardContent>
+                </Link>
+              </Card>
+              <Card className="group hover:shadow-lg transition-all cursor-pointer border-2 hover:border-primary/40">
+                <Link to="/dashboard/wishlist">
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-red-500 to-pink-500">
+                      <Heart className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold group-hover:text-primary transition-colors">Wishlist</p>
+                      <p className="text-xs text-muted-foreground">5 saved courses</p>
+                    </div>
+                  </CardContent>
+                </Link>
+              </Card>
+              <Card className="group hover:shadow-lg transition-all cursor-pointer border-2 hover:border-primary/40">
+                <Link to="/dashboard/certificates">
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500">
+                      <Award className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold group-hover:text-primary transition-colors">Certificates</p>
+                      <p className="text-xs text-muted-foreground">5 certificates earned</p>
+                    </div>
+                  </CardContent>
+                </Link>
               </Card>
             </div>
 

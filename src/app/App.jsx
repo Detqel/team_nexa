@@ -10,6 +10,9 @@ import { LoginPage } from "./pages/login";
 import { RegisterPage } from "./pages/register";
 import { CoursesPage } from "./pages/courses";
 import { ContactPage } from "./pages/contact";
+import { MyCoursesPage } from "./pages/my-courses";
+import { WishlistPage } from "./pages/wishlist";
+import { CertificatesPage } from "./pages/certificates";
 import { Toaster } from "./components/ui/sonner";
 
 export default function App() {
@@ -21,10 +24,21 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* Dashboard Routes (No Header/Footer) */}
+          {/* Student Dashboard Routes (No Header/Footer) */}
           <Route path="/dashboard" element={<StudentDashboard />} />
+          <Route path="/dashboard/my-courses" element={<MyCoursesPage />} />
+          <Route path="/dashboard/wishlist" element={<WishlistPage />} />
+          <Route path="/dashboard/certificates" element={<CertificatesPage />} />
           <Route path="/dashboard/*" element={<StudentDashboard />} />
+
+          {/* Instructor Dashboard Routes (No Header/Footer) */}
+          <Route path="/instructor-dashboard" element={<InstructorDashboard />} />
+          <Route path="/instructor-dashboard/my-courses" element={<MyCoursesPage />} />
+          <Route path="/instructor-dashboard/wishlist" element={<WishlistPage />} />
+          <Route path="/instructor-dashboard/certificates" element={<CertificatesPage />} />
           <Route path="/instructor-dashboard/*" element={<InstructorDashboard />} />
+
+          {/* Admin Routes (No Header/Footer) */}
           <Route path="/admin/*" element={<AdminDashboard />} />
 
           {/* Main Routes (With Header/Footer) */}
@@ -38,7 +52,6 @@ export default function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/courses" element={<CoursesPage />} />
                     <Route path="/categories" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Categories</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
-                    <Route path="/instructor-dashboard" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Instructors</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
                     <Route path="/about" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">About Us</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
                     <Route path="/contact" element={<ContactPage />} />
                     <Route path="/settings" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Settings</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
