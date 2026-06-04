@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { Link, useNavigate, useLocation } from "react-router";
 import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router";
 import {
   BookOpen,
   Award,
@@ -55,8 +56,9 @@ import {
 } from "recharts";
 
 export function StudentDashboard() {
+  const location = useLocation();
   const menuItems = [
-    { icon: BarChart3, label: "Dashboard", href: "/dashboard", active: true },
+    { icon: BarChart3, label: "Dashboard", href: "/dashboard" },
     { icon: BookOpen, label: "My Courses", href: "/dashboard/my-courses" },
     { icon: Heart, label: "Wishlist", href: "/dashboard/wishlist" },
     { icon: Award, label: "Certificates", href: "/dashboard/certificates" },
@@ -66,6 +68,16 @@ export function StudentDashboard() {
     { icon: MessageSquare, label: "Messages", href: "/dashboard/messages" },
     { icon: Bell, label: "Notifications", href: "/dashboard/notifications" },
     { icon: Settings, label: "Settings", href: "/settings" },
+    { icon: BarChart3, label: "Dashboard", href: "/dashboard", active: location.pathname === "/dashboard" },
+    { icon: BookOpen, label: "My Courses", href: "/dashboard/my-courses", active: location.pathname === "/dashboard/my-courses" },
+    { icon: Heart, label: "Wishlist", href: "/dashboard/wishlist", active: location.pathname === "/dashboard/wishlist" },
+    { icon: Award, label: "Certificates", href: "/dashboard/certificates", active: location.pathname === "/dashboard/certificates" },
+    { icon: FileText, label: "Assignments", href: "/dashboard/assignments", active: location.pathname === "/dashboard/assignments" },
+    { icon: Trophy, label: "Quiz", href: "/dashboard/quiz", active: location.pathname === "/dashboard/quiz" },
+    { icon: Target, label: "Progress Tracking", href: "/dashboard/progress", active: location.pathname === "/dashboard/progress" },
+    { icon: MessageSquare, label: "Messages", href: "/dashboard/messages", active: location.pathname === "/dashboard/messages" },
+    { icon: Bell, label: "Notifications", href: "/dashboard/notifications", active: location.pathname === "/dashboard/notifications" },
+    { icon: Settings, label: "Settings", href: "/settings", active: location.pathname === "/settings" },
   ];
 
   const stats = [
@@ -627,7 +639,7 @@ export function StudentDashboard() {
                 <SidebarMenu>
                   {menuItems.map((item) => (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={item.active}>
+                      <SidebarMenuButton asChild isActive={location.pathname === item.href}>
                         <Link
                           to={item.href}
                           className="flex items-center gap-3"
@@ -665,6 +677,310 @@ export function StudentDashboard() {
           ) : activeSub === 'progress' ? (
             <ProgressPage />
           ) : null}
+          <div className="container mx-auto p-6 space-y-6">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">
+                  Welcome back, John! 👋
+                </h1>
+                <p className="text-muted-foreground">
+                  Here's what's happening with your learning today
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12 ring-2 ring-primary/20">
+                  <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=student" />
+                  <AvatarFallback>JD</AvatarFallback>
+                </Avatar>
+              </div>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {stats.map((stat, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card className="relative overflow-hidden group hover:shadow-xl transition-all">
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-10 transition-opacity`}
+                    />
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div
+                          className={`p-3 rounded-xl bg-gradient-to-br ${stat.color}`}
+                        >
+                          <stat.icon className="h-6 w-6 text-white" />
+                        </div>
+                        <Badge variant="success" className="font-semibold">
+                          {stat.change}
+                        </Badge>
+                      </div>
+                      <p className="text-3xl font-bold mb-1">{stat.value}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {stat.label}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Learning Activity Chart */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Learning Activity</CardTitle>
+                  <CardDescription>
+                    Your learning hours over the past 5 months
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={learningData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        className="stroke-muted"
+                      />
+                      <XAxis dataKey="month" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip />
+                      <Line
+                        type="monotone"
+                        dataKey="hours"
+                        stroke="#6366f1"
+                        strokeWidth={3}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Upcoming Deadlines */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Upcoming Deadlines</CardTitle>
+                  <CardDescription>
+                    Don't miss these important dates
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {upcomingDeadlines.map((deadline, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                    >
+                      <Calendar
+                        className={`h-5 w-5 mt-0.5 ${
+                          deadline.priority === "high"
+                            ? "text-red-500"
+                            : deadline.priority === "medium"
+                              ? "text-yellow-500"
+                              : "text-green-500"
+                        }`}
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{deadline.task}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {deadline.course}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {deadline.date}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Access */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="group hover:shadow-lg transition-all cursor-pointer border-2 hover:border-primary/40">
+                <Link to="/dashboard/my-courses">
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500">
+                      <BookOpen className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold group-hover:text-primary transition-colors">My Courses</p>
+                      <p className="text-xs text-muted-foreground">12 enrolled courses</p>
+                    </div>
+                  </CardContent>
+                </Link>
+              </Card>
+              <Card className="group hover:shadow-lg transition-all cursor-pointer border-2 hover:border-primary/40">
+                <Link to="/dashboard/wishlist">
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-red-500 to-pink-500">
+                      <Heart className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold group-hover:text-primary transition-colors">Wishlist</p>
+                      <p className="text-xs text-muted-foreground">5 saved courses</p>
+                    </div>
+                  </CardContent>
+                </Link>
+              </Card>
+              <Card className="group hover:shadow-lg transition-all cursor-pointer border-2 hover:border-primary/40">
+                <Link to="/dashboard/certificates">
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500">
+                      <Award className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold group-hover:text-primary transition-colors">Certificates</p>
+                      <p className="text-xs text-muted-foreground">5 certificates earned</p>
+                    </div>
+                  </CardContent>
+                </Link>
+              </Card>
+            </div>
+
+            {/* Enrolled Courses */}
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Continue Learning</h2>
+                <Button variant="ghost" asChild>
+                  <Link to="/dashboard/my-courses">View All</Link>
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {enrolledCourses.map((course) => (
+                  <Card
+                    key={course.id}
+                    className="group hover:shadow-xl transition-all overflow-hidden"
+                  >
+                    <div className="relative">
+                      <img
+                        src={course.thumbnail}
+                        alt={course.title}
+                        className="w-full h-40 object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <Button
+                        size="icon"
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/90 hover:bg-white hover:scale-110 transition-all"
+                      >
+                        <PlayCircle className="h-6 w-6 text-primary" />
+                      </Button>
+                    </div>
+                    <CardHeader>
+                      <CardTitle className="text-lg line-clamp-1">
+                        {course.title}
+                      </CardTitle>
+                      <CardDescription>{course.instructor}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-muted-foreground">
+                            Progress
+                          </span>
+                          <span className="font-semibold">
+                            {course.progress}%
+                          </span>
+                        </div>
+                        <Progress value={course.progress} className="h-2" />
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {course.nextLesson}
+                        </span>
+                        <Badge variant="secondary">{course.duration}</Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Activity & Course Progress */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Recent Activity */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Activity</CardTitle>
+                  <CardDescription>
+                    Your latest learning milestones
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {recentActivity.map((activity, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 pb-4 border-b last:border-0"
+                    >
+                      <div
+                        className={`p-2 rounded-lg ${
+                          activity.type === "completed"
+                            ? "bg-green-100 dark:bg-green-900/20"
+                            : activity.type === "started"
+                              ? "bg-blue-100 dark:bg-blue-900/20"
+                              : activity.type === "certificate"
+                                ? "bg-purple-100 dark:bg-purple-900/20"
+                                : "bg-yellow-100 dark:bg-yellow-900/20"
+                        }`}
+                      >
+                        {activity.type === "completed" && (
+                          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        )}
+                        {activity.type === "started" && (
+                          <PlayCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        )}
+                        {activity.type === "certificate" && (
+                          <Award className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        )}
+                        {activity.type === "quiz" && (
+                          <Trophy className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{activity.lesson}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {activity.course}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {activity.time}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Course Progress Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Weekly Progress</CardTitle>
+                  <CardDescription>Completion rate by week</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={courseProgressData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        className="stroke-muted"
+                      />
+                      <XAxis dataKey="name" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip />
+                      <Bar
+                        dataKey="completed"
+                        fill="#6366f1"
+                        radius={[8, 8, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </div>
     </SidebarProvider>

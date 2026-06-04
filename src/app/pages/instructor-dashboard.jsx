@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -21,6 +21,8 @@ import {
   MoreVertical,
   Search,
   Filter,
+  Heart,
+  Award,
 } from "lucide-react";
 import {
   Card,
@@ -83,24 +85,24 @@ import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 
 export function InstructorDashboard() {
+  const location = useLocation();
   const [createCourseOpen, setCreateCourseOpen] = useState(false);
 
   const menuItems = [
     {
       icon: LayoutDashboard,
       label: "Dashboard",
-      href: "/instructor/dashboard",
-      active: true,
+      href: "/instructor-dashboard",
     },
-    { icon: BookOpen, label: "Manage Courses", href: "/instructor/courses" },
-    { icon: Plus, label: "Create Course", href: "/instructor/create" },
-    { icon: Upload, label: "Upload Videos", href: "/instructor/upload" },
-    { icon: Users, label: "Students", href: "/instructor/students" },
-    { icon: BarChart3, label: "Analytics", href: "/instructor/analytics" },
-    { icon: DollarSign, label: "Earnings", href: "/instructor/earnings" },
-    { icon: FileText, label: "Assignments", href: "/instructor/assignments" },
-    { icon: Trophy, label: "Quiz Management", href: "/instructor/quiz" },
-    { icon: Settings, label: "Settings", href: "/instructor/settings" },
+    { icon: BookOpen, label: "Manage Courses", href: "/instructor-dashboard/courses" },
+    { icon: Plus, label: "Create Course", href: "/instructor-dashboard/create" },
+    { icon: Upload, label: "Upload Videos", href: "/instructor-dashboard/upload" },
+    { icon: Users, label: "Students", href: "/instructor-dashboard/students" },
+    { icon: BarChart3, label: "Analytics", href: "/instructor-dashboard/analytics" },
+    { icon: DollarSign, label: "Earnings", href: "/instructor-dashboard/earnings" },
+    { icon: FileText, label: "Assignments", href: "/instructor-dashboard/assignments" },
+    { icon: Trophy, label: "Quiz Management", href: "/instructor-dashboard/quiz" },
+    { icon: Settings, label: "Settings", href: "/instructor-dashboard/settings" },
   ];
 
   const stats = [
@@ -229,7 +231,7 @@ export function InstructorDashboard() {
                 <SidebarMenu>
                   {menuItems.map((item) => (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={item.active}>
+                      <SidebarMenuButton asChild isActive={location.pathname === item.href}>
                         <Link
                           to={item.href}
                           className="flex items-center gap-3"
@@ -362,6 +364,52 @@ export function InstructorDashboard() {
                   </Card>
                 </motion.div>
               ))}
+            </div>
+
+            {/* Quick Access - Student Pages */}
+            <div>
+              <h2 className="text-lg font-semibold mb-3 text-muted-foreground">Student View</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="group hover:shadow-lg transition-all cursor-pointer border-2 hover:border-primary/40">
+                  <Link to="/instructor-dashboard/my-courses">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500">
+                        <BookOpen className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold group-hover:text-primary transition-colors">My Courses</p>
+                        <p className="text-xs text-muted-foreground">Your enrolled courses</p>
+                      </div>
+                    </CardContent>
+                  </Link>
+                </Card>
+                <Card className="group hover:shadow-lg transition-all cursor-pointer border-2 hover:border-primary/40">
+                  <Link to="/instructor-dashboard/wishlist">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-red-500 to-pink-500">
+                        <Heart className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold group-hover:text-primary transition-colors">Wishlist</p>
+                        <p className="text-xs text-muted-foreground">Saved courses</p>
+                      </div>
+                    </CardContent>
+                  </Link>
+                </Card>
+                <Card className="group hover:shadow-lg transition-all cursor-pointer border-2 hover:border-primary/40">
+                  <Link to="/instructor-dashboard/certificates">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500">
+                        <Award className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold group-hover:text-primary transition-colors">Certificates</p>
+                        <p className="text-xs text-muted-foreground">Your certifications</p>
+                      </div>
+                    </CardContent>
+                  </Link>
+                </Card>
+              </div>
             </div>
 
             {/* Charts */}

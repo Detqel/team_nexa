@@ -21,6 +21,12 @@ export function LoginPage() {
     localStorage.setItem("user", JSON.stringify(user));
     navigate("/dashboard");
   }
+  const navigate = useNavigate();
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    navigate("/dashboard");
+  };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
