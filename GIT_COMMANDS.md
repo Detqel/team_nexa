@@ -234,9 +234,9 @@ git stash pop  # Apply stashed changes back
 git status
 
 # 2. Open conflicted files and look for:
-# <<<<<<< HEAD
+
 # Your changes
-# =======
+
 # Their changes
 # >>>>>>> branch-name
 
