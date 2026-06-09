@@ -1,4 +1,3 @@
-
 import { Link } from "react-router";
 import { Users, BookOpen, Award, ArrowRight } from "lucide-react";
 import { Button } from "../components/ui/button";
