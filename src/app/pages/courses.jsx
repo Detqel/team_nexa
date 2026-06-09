@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import {
   Search,
@@ -34,6 +35,14 @@ import { Label } from "../components/ui/label";
 export function CoursesPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedLevel, setSelectedLevel] = useState("all");
+  const navigate = useNavigate();
+  const [userState, setUserState] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user")) || null;
+    } catch (e) {
+      return null;
+    }
+  });
 
   const categories = [
     "All Categories",
@@ -149,6 +158,39 @@ export function CoursesPage() {
       bestseller: true,
     },
   ];
+
+  useEffect(() => {
+    // persist the full course catalog client-side for dashboard lookups
+    try {
+      localStorage.setItem("allCourses", JSON.stringify(courses));
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  function getUser() {
+    try {
+      return JSON.parse(localStorage.getItem("user")) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function handleEnroll(courseId) {
+    const u = getUser();
+    if (!u) {
+      navigate("/login");
+      return;
+    }
+    u.enrolledCourses = u.enrolledCourses || [];
+    u.courseProgress = u.courseProgress || {};
+    if (!u.enrolledCourses.includes(courseId)) {
+      u.enrolledCourses.push(courseId);
+      u.courseProgress[courseId] = u.courseProgress[courseId] || 0;
+      localStorage.setItem("user", JSON.stringify(u));
+      setUserState({ ...u });
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -403,8 +445,12 @@ export function CoursesPage() {
                         <span className="text-2xl font-bold text-primary">
                           {course.price}
                         </span>
-                        <Button size="sm" variant="default">
-                          Enroll Now
+                        <Button
+                          size="sm"
+                          variant={userState?.enrolledCourses?.includes(course.id) ? "secondary" : "default"}
+                          onClick={() => handleEnroll(course.id)}
+                        >
+                          {userState?.enrolledCourses?.includes(course.id) ? "Enrolled" : "Enroll Now"}
                         </Button>
                       </CardFooter>
                     </Card>

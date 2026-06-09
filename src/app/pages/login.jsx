@@ -9,6 +9,18 @@ import { Checkbox } from "../components/ui/checkbox";
 
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const namePart = email.split("@")[0] || "Student";
+    const name = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+    const user = { email, name, enrolledCourses: [], courseProgress: {} };
+    localStorage.setItem("user", JSON.stringify(user));
+    navigate("/dashboard");
+  }
   const navigate = useNavigate();
 
   const handleSubmit = (event) => {
@@ -50,6 +62,8 @@ export function LoginPage() {
                     type="email"
                     placeholder="you@example.com"
                     className="pl-10"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
               </div>
@@ -71,6 +85,8 @@ export function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     className="pl-10 pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
 
                   <button
