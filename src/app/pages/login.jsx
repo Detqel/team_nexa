@@ -13,18 +13,12 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  function handleSubmit(e) {
-    e.preventDefault();
+  const handleSubmit = (event) => {
+    event.preventDefault();
     const namePart = email.split("@")[0] || "Student";
     const name = namePart.charAt(0).toUpperCase() + namePart.slice(1);
     const user = { email, name, enrolledCourses: [], courseProgress: {} };
     localStorage.setItem("user", JSON.stringify(user));
-    navigate("/dashboard");
-  }
-  const navigate = useNavigate();
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
     navigate("/dashboard");
   };
 

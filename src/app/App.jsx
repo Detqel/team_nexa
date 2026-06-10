@@ -10,6 +10,7 @@ import { LoginPage } from "./pages/login";
 import { RegisterPage } from "./pages/register";
 import { CoursesPage } from "./pages/courses";
 import Categories from "./pages/categories";
+import { AboutPage } from "./pages/about";
 import { ContactPage } from "./pages/contact";
 import { MyCoursesPage } from "./pages/my-courses";
 import { WishlistPage } from "./pages/wishlist";
@@ -87,25 +88,11 @@ export default function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/courses" element={<CoursesPage />} />
                     <Route path="/categories" element={<Categories />} />
-                    <Route
-                      path="/about"
-                      element={
-                        <div className="container mx-auto px-4 py-20 text-center">
-                          <h1 className="text-4xl font-bold">About</h1>
-                          <p className="text-muted-foreground mt-4">Coming soon...</p>
-                        </div>
-                      }
-                    />
+                    <Route path="/about" element={<AboutPage />} />
                     <Route path="/instructors" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Instructors</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
-                    <Route path="/contact" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Contact</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
-                    <Route path="/settings" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Settings</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
-                    <Route path="*" element={<NotFoundPage />} />
-                    <Route path="/categories" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Categories</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
-                    <Route path="/about" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">About Us</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
                     <Route path="/contact" element={<ContactPage />} />
-                    <Route path="/settings" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Settings</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
-                    <Route path="/contact" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Contact</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="*" element={<NotFoundPage />} />
                   </Routes>
                 </main>
                 <Footer />
