@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { ThemeProvider } from "./components/theme-provider";
 import { Header } from "./components/header";
 import { Footer } from "./components/footer";
@@ -39,6 +39,11 @@ function NotFoundPage() {
   );
 }
 
+function RequireAuth({ children }) {
+  const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+  return currentUser ? children : <Navigate to="/login" replace />;
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -49,30 +54,29 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
 
           {/* Student Dashboard Routes */}
-          {/* Dashboard Routes (No Header/Footer) */}
-          <Route path="/dashboard/messages" element={<MessagesPage />} />
-          <Route path="/dashboard/notifications" element={<NotificationsPage />} />
-          <Route path="/dashboard" element={<StudentDashboard />} />
-          <Route path="/dashboard/my-courses" element={<MyCoursesPage />} />
-          <Route path="/dashboard/wishlist" element={<WishlistPage />} />
-          <Route path="/dashboard/certificates" element={<CertificatesPage />} />
-          <Route path="/dashboard/*" element={<StudentDashboard />} />
+          <Route path="/dashboard/messages" element={<RequireAuth><MessagesPage /></RequireAuth>} />
+          <Route path="/dashboard/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
+          <Route path="/dashboard" element={<RequireAuth><StudentDashboard /></RequireAuth>} />
+          <Route path="/dashboard/my-courses" element={<RequireAuth><MyCoursesPage /></RequireAuth>} />
+          <Route path="/dashboard/wishlist" element={<RequireAuth><WishlistPage /></RequireAuth>} />
+          <Route path="/dashboard/certificates" element={<RequireAuth><CertificatesPage /></RequireAuth>} />
+          <Route path="/dashboard/*" element={<RequireAuth><StudentDashboard /></RequireAuth>} />
 
           {/* Instructor Dashboard Routes */}
-          <Route path="/instructor-dashboard" element={<InstructorDashboard />} />
-          <Route path="/instructor-dashboard/courses" element={<ManageCoursesPage />} />
-          <Route path="/instructor-dashboard/create" element={<CreateCoursePage />} />
-          <Route path="/instructor-dashboard/upload" element={<UploadVideosPage />} />
-          <Route path="/instructor-dashboard/students" element={<StudentsPage />} />
-          <Route path="/instructor-dashboard/analytics" element={<AnalyticsPage />} />
-          <Route path="/instructor-dashboard/earnings" element={<EarningsPage />} />
-          <Route path="/instructor-dashboard/assignments" element={<AssignmentsPage />} />
-          <Route path="/instructor-dashboard/quiz" element={<QuizManagementPage />} />
-          <Route path="/instructor-dashboard/settings" element={<InstructorSettingsPage />} />
-          <Route path="/instructor-dashboard/my-courses" element={<MyCoursesPage />} />
-          <Route path="/instructor-dashboard/wishlist" element={<WishlistPage />} />
-          <Route path="/instructor-dashboard/certificates" element={<CertificatesPage />} />
-          <Route path="/instructor-dashboard/*" element={<InstructorDashboard />} />
+          <Route path="/instructor-dashboard" element={<RequireAuth><InstructorDashboard /></RequireAuth>} />
+          <Route path="/instructor-dashboard/courses" element={<RequireAuth><ManageCoursesPage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/create" element={<RequireAuth><CreateCoursePage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/upload" element={<RequireAuth><UploadVideosPage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/students" element={<RequireAuth><StudentsPage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/analytics" element={<RequireAuth><AnalyticsPage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/earnings" element={<RequireAuth><EarningsPage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/assignments" element={<RequireAuth><AssignmentsPage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/quiz" element={<RequireAuth><QuizManagementPage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/settings" element={<RequireAuth><InstructorSettingsPage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/my-courses" element={<RequireAuth><MyCoursesPage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/wishlist" element={<RequireAuth><WishlistPage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/certificates" element={<RequireAuth><CertificatesPage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/*" element={<RequireAuth><InstructorDashboard /></RequireAuth>} />
 
           {/* Admin Routes */}
           <Route path="/admin/*" element={<AdminDashboard />} />
@@ -86,12 +90,12 @@ export default function App() {
                 <main className="flex-1">
                   <Routes>
                     <Route path="/" element={<HomePage />} />
-                    <Route path="/courses" element={<CoursesPage />} />
-                    <Route path="/categories" element={<Categories />} />
+                    <Route path="/courses" element={<RequireAuth><CoursesPage /></RequireAuth>} />
+                    <Route path="/categories" element={<RequireAuth><Categories /></RequireAuth>} />
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/instructors" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Instructors</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
-                    <Route path="/contact" element={<ContactPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/contact" element={<RequireAuth><ContactPage /></RequireAuth>} />
+                    <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Routes>
                 </main>

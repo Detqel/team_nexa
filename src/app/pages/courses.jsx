@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import {
@@ -33,8 +33,10 @@ import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
 
 export function CoursesPage() {
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedLevel, setSelectedLevel] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOption, setSortOption] = useState("title-asc");
   const navigate = useNavigate();
   const [userState, setUserState] = useState(() => {
     try {
@@ -168,6 +170,49 @@ export function CoursesPage() {
     }
   }, []);
 
+  const visibleCourses = useMemo(() => {
+    let out = courses.slice();
+
+    if (selectedCategories && selectedCategories.length > 0 && !selectedCategories.includes("All Categories")) {
+      out = out.filter((c) => selectedCategories.includes(c.category));
+    }
+
+    if (selectedLevel && selectedLevel !== "all" && selectedLevel !== "All Levels") {
+      out = out.filter((c) => c.level === selectedLevel);
+    }
+
+    if (searchQuery && searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      out = out.filter((c) => c.title.toLowerCase().includes(q));
+    }
+
+    const levelOrder = { Beginner: 1, Intermediate: 2, Advanced: 3, "All Levels": 2 };
+    switch (sortOption) {
+      case "title-asc":
+        out.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "title-desc":
+        out.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      case "newest":
+        out.sort((a, b) => b.id - a.id);
+        break;
+      case "oldest":
+        out.sort((a, b) => a.id - b.id);
+        break;
+      case "level-asc":
+        out.sort((a, b) => (levelOrder[a.level] || 99) - (levelOrder[b.level] || 99));
+        break;
+      case "level-desc":
+        out.sort((a, b) => (levelOrder[b.level] || 99) - (levelOrder[a.level] || 99));
+        break;
+      default:
+        break;
+    }
+
+    return out;
+  }, [courses, selectedCategories, selectedLevel, searchQuery, sortOption]);
+
   function getUser() {
     try {
       return JSON.parse(localStorage.getItem("user")) || null;
@@ -218,6 +263,8 @@ export function CoursesPage() {
                   type="search"
                   placeholder="Search for courses..."
                   className="pl-12 pr-4 h-12 text-base"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
@@ -243,20 +290,43 @@ export function CoursesPage() {
                   <div className="space-y-3">
                     <Label className="text-base font-semibold">Category</Label>
                     <div className="space-y-2">
-                      {categories.map((category) => (
-                        <div
-                          key={category}
-                          className="flex items-center space-x-2"
-                        >
-                          <Checkbox id={category} />
-                          <label
-                            htmlFor={category}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      {categories.map((category) => {
+                        const isAll = category === "All Categories";
+                        const checked = isAll ? selectedCategories.length === 0 : selectedCategories.includes(category);
+                        return (
+                          <div
+                            key={category}
+                            className={`flex items-center space-x-2 cursor-pointer p-1 rounded ${checked ? "bg-muted/30" : ""}`}
+                            onClick={() => {
+                              if (isAll) {
+                                setSelectedCategories([]);
+                              } else {
+                                setSelectedCategories((prev) => {
+                                  if (prev.includes(category)) return prev.filter((c) => c !== category);
+                                  return [...prev, category];
+                                });
+                              }
+                            }}
                           >
-                            {category}
-                          </label>
-                        </div>
-                      ))}
+                            <Checkbox id={category} checked={checked} onCheckedChange={() => {
+                              if (isAll) {
+                                setSelectedCategories([]);
+                              } else {
+                                setSelectedCategories((prev) => {
+                                  if (prev.includes(category)) return prev.filter((c) => c !== category);
+                                  return [...prev, category];
+                                });
+                              }
+                            }} />
+                            <label
+                              htmlFor={category}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              {category}
+                            </label>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -272,9 +342,10 @@ export function CoursesPage() {
                       ].map((level) => (
                         <div
                           key={level}
-                          className="flex items-center space-x-2"
+                          className={`flex items-center space-x-2 cursor-pointer p-1 rounded ${selectedLevel === (level === "All Levels" ? "all" : level) ? "bg-muted/30" : ""}`}
+                          onClick={() => setSelectedLevel(level === "All Levels" ? "all" : level)}
                         >
-                          <Checkbox id={level} />
+                          <Checkbox id={level} checked={selectedLevel === (level === "All Levels" ? "all" : level)} onCheckedChange={() => setSelectedLevel(level === "All Levels" ? "all" : level)} />
                           <label
                             htmlFor={level}
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -346,31 +417,28 @@ export function CoursesPage() {
                 <p className="text-muted-foreground">
                   Showing{" "}
                   <span className="font-semibold text-foreground">
-                    {courses.length}
+                    {visibleCourses.length}
                   </span>{" "}
                   courses
                 </p>
-                <Select defaultValue="popular">
-                  <SelectTrigger className="w-full md:w-[200px]">
+                <Select value={sortOption} onValueChange={(v) => setSortOption(v)}>
+                  <SelectTrigger className="w-full md:w-[220px]">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="popular">Most Popular</SelectItem>
-                    <SelectItem value="rating">Highest Rated</SelectItem>
-                    <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="price-low">
-                      Price: Low to High
-                    </SelectItem>
-                    <SelectItem value="price-high">
-                      Price: High to Low
-                    </SelectItem>
+                    <SelectItem value="title-asc">Title A → Z</SelectItem>
+                    <SelectItem value="title-desc">Title Z → A</SelectItem>
+                    <SelectItem value="newest">Newest First</SelectItem>
+                    <SelectItem value="oldest">Oldest First</SelectItem>
+                    <SelectItem value="level-asc">Level: Beginner → Advanced</SelectItem>
+                    <SelectItem value="level-desc">Level: Advanced → Beginner</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Course Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {courses.map((course, index) => (
+                {visibleCourses.map((course, index) => (
                   <motion.div
                     key={course.id}
                     initial={{ opacity: 0, y: 20 }}

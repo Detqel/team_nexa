@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
-import { Bell, MessageSquare, Settings, GraduationCap, CheckCircle2, XCircle } from "lucide-react";
+import { Link, useLocation } from "react-router";
+import { Bell, MessageSquare, Settings, GraduationCap, CheckCircle2, XCircle, BookOpen, BarChart3, FileText, Trophy } from "lucide-react";
 import {
   SidebarProvider,
   Sidebar,
@@ -65,12 +65,17 @@ export function NotificationsPage() {
     );
   };
 
+  const location = useLocation();
+
   const menuItems = [
-    { icon: MessageSquare, label: "Dashboard", href: "/dashboard" },
+    { icon: BarChart3, label: "Dashboard", href: "/dashboard" },
+    { icon: BookOpen, label: "My Courses", href: "/dashboard/my-courses" },
+    { icon: FileText, label: "Assignments", href: "/dashboard/assignments" },
+    { icon: Trophy, label: "Quiz", href: "/dashboard/quiz" },
     { icon: MessageSquare, label: "Messages", href: "/dashboard/messages" },
-    { icon: Bell, label: "Notifications", href: "/dashboard/notifications", active: true },
-    { icon: Settings, label: "Settings", href: "/settings" },
-  ];
+    { icon: Bell, label: "Notifications", href: "/dashboard/notifications" },
+    { icon: Settings, label: "Settings", href: "/dashboard/settings" },
+  ].map((m) => ({ ...m, active: location.pathname === m.href }));
 
   return (
     <SidebarProvider>

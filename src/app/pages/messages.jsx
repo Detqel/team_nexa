@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation } from "react-router";
 import { Link } from "react-router";
 import {
   MessageSquare,
@@ -7,6 +8,10 @@ import {
   Search,
   Send,
   GraduationCap,
+  BookOpen,
+  BarChart3,
+  FileText,
+  Trophy,
 } from "lucide-react";
 import {
   SidebarProvider,
@@ -100,12 +105,17 @@ export function MessagesPage() {
     setMessageInput("");
   };
 
+  const location = useLocation();
+
   const menuItems = [
-    { icon: MessageSquare, label: "Dashboard", href: "/dashboard" },
-    { icon: MessageSquare, label: "Messages", href: "/dashboard/messages", active: true },
+    { icon: BarChart3, label: "Dashboard", href: "/dashboard" },
+    { icon: BookOpen, label: "My Courses", href: "/dashboard/my-courses" },
+    { icon: FileText, label: "Assignments", href: "/dashboard/assignments" },
+    { icon: Trophy, label: "Quiz", href: "/dashboard/quiz" },
+    { icon: MessageSquare, label: "Messages", href: "/dashboard/messages" },
     { icon: Bell, label: "Notifications", href: "/dashboard/notifications" },
-    { icon: Settings, label: "Settings", href: "/settings" },
-  ];
+    { icon: Settings, label: "Settings", href: "/dashboard/settings" },
+  ].map((m) => ({ ...m, active: location.pathname === m.href }));
 
   return (
     <SidebarProvider>

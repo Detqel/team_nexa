@@ -19,6 +19,9 @@ import { Progress } from "../components/ui/progress";
 export function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("student");
 
   const getPasswordStrength = () => {
     if (!password) return 0;
@@ -31,6 +34,29 @@ export function RegisterPage() {
   };
 
   const passwordStrength = getPasswordStrength();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!name || !email || !password) {
+      alert('Please fill name, email and password');
+      return;
+    }
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    if (users.find((u) => u.email === email)) {
+      alert('An account with this email already exists. Please login.');
+      return;
+    }
+    const newUser = { name, email, password, role, enrolledCourses: [], courseProgress: {} };
+    users.push(newUser);
+    localStorage.setItem('users', JSON.stringify(users));
+    const { password: _p, ...publicUser } = newUser;
+    localStorage.setItem('user', JSON.stringify(publicUser));
+    if (role === 'instructor') {
+      window.location.href = '/instructor-dashboard';
+    } else {
+      window.location.href = '/dashboard';
+    }
+  };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
@@ -110,9 +136,9 @@ export function RegisterPage() {
             </p>
           </div>
 
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
-              <div className="space-y-2">
+                <div className="space-y-2">
                 <Label htmlFor="name">Full name</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -121,7 +147,23 @@ export function RegisterPage() {
                     type="text"
                     placeholder="John Doe"
                     className="pl-10"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                   />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Account Type</Label>
+                <div className="flex items-center gap-4">
+                  <label className={`inline-flex items-center gap-2 p-2 rounded ${role === 'student' ? 'bg-muted/30' : ''}`}>
+                    <input type="radio" name="role" value="student" checked={role === 'student'} onChange={() => setRole('student')} />
+                    <span className="text-sm">Student</span>
+                  </label>
+                  <label className={`inline-flex items-center gap-2 p-2 rounded ${role === 'instructor' ? 'bg-muted/30' : ''}`}>
+                    <input type="radio" name="role" value="instructor" checked={role === 'instructor'} onChange={() => setRole('instructor')} />
+                    <span className="text-sm">Instructor</span>
+                  </label>
                 </div>
               </div>
 
@@ -134,6 +176,8 @@ export function RegisterPage() {
                     type="email"
                     placeholder="you@example.com"
                     className="pl-10"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
               </div>

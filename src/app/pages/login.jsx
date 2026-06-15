@@ -15,11 +15,20 @@ export function LoginPage() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    const namePart = email.split("@")[0] || "Student";
-    const name = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-    const user = { email, name, enrolledCourses: [], courseProgress: {} };
-    localStorage.setItem("user", JSON.stringify(user));
-    navigate("/dashboard");
+    const users = JSON.parse(localStorage.getItem("users") || "[]");
+    const found = users.find((u) => u.email === email && u.password === password);
+    if (!found) {
+      alert("Invalid credentials. Please register or check your email/password.");
+      return;
+    }
+    // Persist current user (without password for safety)
+    const { password: _p, ...publicUser } = found;
+    localStorage.setItem("user", JSON.stringify(publicUser));
+    if (found.role === "instructor") {
+      navigate("/instructor-dashboard");
+    } else {
+      navigate("/dashboard");
+    }
   };
 
   return (

@@ -280,7 +280,7 @@ export function ContactPage() {
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
             >
-              <Card className="border-border/50 shadow-xl">
+              <Card className="border-border/50 bg-background">
                 <CardHeader>
                   <CardTitle className="text-2xl">Send us a message</CardTitle>
                   <CardDescription>

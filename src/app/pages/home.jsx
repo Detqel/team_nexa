@@ -264,7 +264,7 @@ export function HomePage() {
                   </Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
-                  <Link to="/about">Explore Courses</Link>
+                  <Link to="/courses">Explore Courses</Link>
                 </Button>
               </div>
             </motion.div>

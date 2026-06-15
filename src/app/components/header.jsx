@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { Link } from "react-router";
-import { Search, Bell, Menu, X, GraduationCap, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router";
+import { Search, Bell, Menu, X, GraduationCap, ChevronDown, Mail } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ThemeToggle } from "./theme-toggle";
@@ -18,16 +18,39 @@ import {
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
-  const navLinks = [
+  const location = useLocation();
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setCurrentUser(null);
+    window.location.href = "/";
+  };
+
+  useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user')) || null;
+      setCurrentUser(u);
+    } catch (e) {
+      setCurrentUser(null);
+    }
+  }, [location.pathname]);
+
+  const publicLinks = [
+    { href: "/", label: "Home" },
+    { href: "/about", label: "About" },
+  ];
+
+  const privateLinks = [
     { href: "/", label: "Home" },
     { href: "/courses", label: "Courses" },
     { href: "/categories", label: "Categories" },
-    { href: "/instructor-dashboard", label: "Instructors" },
     { href: "/dashboard", label: "Dashboard" },
-    { href: "/about", label: "About" },
-    { href: "/contact", label: "Contact" },
+    { href: "/instructor-dashboard", label: "Instructor" },
   ];
+
+  const navLinks = currentUser ? privateLinks : publicLinks;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -78,89 +101,94 @@ export function Header() {
 
           {/* Right Section */}
           <div className="flex items-center gap-3">
-            {/* Notifications */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  <Badge
-                    variant="danger"
-                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
-                  >
-                    3
-                  </Badge>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-                  <p className="font-medium">New course available</p>
-                  <p className="text-xs text-muted-foreground">
-                    "Advanced React Patterns" is now available
-                  </p>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-                  <p className="font-medium">Assignment due soon</p>
-                  <p className="text-xs text-muted-foreground">
-                    Complete "JavaScript Basics Quiz" by tomorrow
-                  </p>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-                  <p className="font-medium">Certificate earned</p>
-                  <p className="text-xs text-muted-foreground">
-                    Congratulations! You've earned a new certificate
-                  </p>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              {/* Notifications */}
+            {currentUser && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-5 w-5" />
+                    <Badge
+                      variant="danger"
+                      className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                    >
+                      3
+                    </Badge>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80">
+                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
+                    <p className="font-medium">New course available</p>
+                    <p className="text-xs text-muted-foreground">
+                      "Advanced React Patterns" is now available
+                    </p>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
+                    <p className="font-medium">Assignment due soon</p>
+                    <p className="text-xs text-muted-foreground">
+                      Complete "JavaScript Basics Quiz" by tomorrow
+                    </p>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
+                    <p className="font-medium">Certificate earned</p>
+                    <p className="text-xs text-muted-foreground">
+                      Congratulations! You've earned a new certificate
+                    </p>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             {/* Theme Toggle */}
             <ThemeToggle />
 
-            {/* Profile Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="hidden md:flex items-center gap-2 px-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=student" />
-                    <AvatarFallback>JD</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium">John Doe</span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Link to="/dashboard" className="w-full">Dashboard</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link to="/dashboard/my-courses" className="w-full">My Courses</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link to="/dashboard/certificates" className="w-full">Certificates</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link to="/settings" className="w-full">Settings</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Link to="/login" className="w-full text-destructive">Logout</Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Login/Register - for non-authenticated state */}
-            <div className="hidden lg:flex items-center gap-2">
+            {/* Profile Dropdown or Auth Links */}
+            {currentUser && (
               <Button variant="ghost" asChild>
-                <Link to="/login">Login</Link>
+                <Link to="/contact" aria-label="Contact" className="p-2">
+                  <Mail className="h-5 w-5" />
+                </Link>
               </Button>
-              <Button variant="default" asChild className="bg-gradient-to-r from-primary to-accent hover:opacity-90">
-                <Link to="/register">Register</Link>
-              </Button>
-            </div>
+            )}
+
+            {currentUser ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="hidden md:flex items-center gap-2 px-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.name}`} />
+                      <AvatarFallback>{currentUser.name?.[0] || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium">{currentUser.name}</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <Link to={currentUser.role === 'instructor' ? '/instructor-dashboard' : '/dashboard'} className="w-full">Dashboard</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Link to="/settings" className="w-full">Settings</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <button className="w-full text-left text-destructive" onClick={() => { localStorage.removeItem('user'); setCurrentUser(null); window.location.href = '/'; }}>Logout</button>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="hidden lg:flex items-center gap-2">
+                <Button variant="ghost" asChild>
+                  <Link to="/login">Login</Link>
+                </Button>
+                <Button variant="default" asChild className="bg-gradient-to-r from-primary to-accent hover:opacity-90">
+                  <Link to="/register">Register</Link>
+                </Button>
+              </div>
+            )}
 
             {/* Mobile Menu Button */}
             <Button
@@ -198,13 +226,34 @@ export function Header() {
                 </Link>
               ))}
               <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border">
-                <Button variant="outline" asChild>
-                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>Login</Link>
-                </Button>
-                <Button variant="default" asChild>
-                  <Link to="/register" onClick={() => setMobileMenuOpen(false)}>Register</Link>
-                </Button>
-              </div>
+              {currentUser ? (
+                <>
+                  <Button variant="outline" asChild>
+                    <Link to="/contact" onClick={() => setMobileMenuOpen(false)}>Contact</Link>
+                  </Button>
+                  <Button variant="default" asChild>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        handleLogout();
+                      }}
+                    >
+                      Logout
+                    </button>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" asChild>
+                    <Link to="/login" onClick={() => setMobileMenuOpen(false)}>Login</Link>
+                  </Button>
+                  <Button variant="default" asChild>
+                    <Link to="/register" onClick={() => setMobileMenuOpen(false)}>Register</Link>
+                  </Button>
+                </>
+              )}
+            </div>
             </nav>
           </div>
         )}

@@ -68,6 +68,36 @@ export function CreateCoursePage() {
 
   const progress = ((step - 1) / (steps.length - 1)) * 100;
 
+  const isStepComplete = (s) => {
+    if (s === 1) return form.title && form.description && form.category && form.level;
+    if (s === 2) return form.sections && form.sections.some((sec) => sec.lessons && sec.lessons.length > 0);
+    if (s === 3) return !!form.thumbnail || !!form.promoVideo;
+    if (s === 4) return form.isFree || (!!form.price && Number(form.price) > 0);
+    return true;
+  };
+
+  const attemptStep = (target) => {
+    if (target <= step) {
+      setStep(target);
+      return;
+    }
+    // allow moving forward only if previous step is complete
+    if (isStepComplete(target - 1)) {
+      setStep(target);
+    } else {
+      alert('Please complete the previous step before proceeding.');
+    }
+  };
+
+  const handleNextStep = () => {
+    if (step >= steps.length) return;
+    if (!isStepComplete(step)) {
+      alert('Please complete required fields before moving to the next step.');
+      return;
+    }
+    setStep((s) => Math.min(steps.length, s + 1));
+  };
+
   return (
     <InstructorLayout>
       <div className="container mx-auto p-6 max-w-4xl space-y-6">
@@ -83,7 +113,7 @@ export function CreateCoursePage() {
               {steps.map((s, i) => (
                 <div key={s.id} className="flex items-center gap-2 flex-shrink-0">
                   <button
-                    onClick={() => setStep(s.id)}
+                    onClick={() => attemptStep(s.id)}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
                       ${step === s.id ? "bg-primary text-primary-foreground" : step > s.id ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-muted text-muted-foreground"}`}
                   >
@@ -366,8 +396,8 @@ export function CreateCoursePage() {
           <Button variant="outline" onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1}>
             <ChevronLeft className="h-4 w-4 mr-2" /> Previous
           </Button>
-          <Button onClick={() => step < 5 ? setStep((s) => s + 1) : null} disabled={step === 5} className="bg-gradient-to-r from-indigo-500 to-purple-600">
-            Next <ChevronRight className="h-4 w-4 ml-2" />
+          <Button onClick={handleNextStep} disabled={step === steps.length || !isStepComplete(step)} className="bg-gradient-to-r from-indigo-500 to-purple-600">
+            {step === steps.length ? "Finish" : "Next"} <ChevronRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
       </div>
