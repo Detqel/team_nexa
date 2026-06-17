@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation } from "react-router-dom";
 import { Search, Bell, Menu, X, GraduationCap, ChevronDown, Mail } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -15,6 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 
+import { getUser, clearAuth, isAuthenticated } from "../lib/auth";
+
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -23,18 +25,13 @@ export function Header() {
   const location = useLocation();
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
+    clearAuth();
     setCurrentUser(null);
     window.location.href = "/";
   };
 
   useEffect(() => {
-    try {
-      const u = JSON.parse(localStorage.getItem('user')) || null;
-      setCurrentUser(u);
-    } catch (e) {
-      setCurrentUser(null);
-    }
+    setCurrentUser(isAuthenticated() ? getUser() : null);
   }, [location.pathname]);
 
   const publicLinks = [
@@ -84,9 +81,8 @@ export function Header() {
           {/* Search Bar */}
           <div className="hidden md:flex flex-1 max-w-md mx-8">
             <div
-              className={`relative w-full transition-all duration-300 ${
-                searchFocused ? "scale-105" : ""
-              }`}
+              className={`relative w-full transition-all duration-300 ${searchFocused ? "scale-105" : ""
+                }`}
             >
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -101,7 +97,7 @@ export function Header() {
 
           {/* Right Section */}
           <div className="flex items-center gap-3">
-              {/* Notifications */}
+            {/* Notifications */}
             {currentUser && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -171,11 +167,11 @@ export function Header() {
                     <Link to={currentUser.role === 'instructor' ? '/instructor-dashboard' : '/dashboard'} className="w-full">Dashboard</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Link to="/settings" className="w-full">Settings</Link>
+                    <Link to="/dashboard/settings" className="w-full">Settings</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
-                    <button className="w-full text-left text-destructive" onClick={() => { localStorage.removeItem('user'); setCurrentUser(null); window.location.href = '/'; }}>Logout</button>
+                    <button className="w-full text-left text-destructive" onClick={handleLogout}>Logout</button>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -226,34 +222,34 @@ export function Header() {
                 </Link>
               ))}
               <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border">
-              {currentUser ? (
-                <>
-                  <Button variant="outline" asChild>
-                    <Link to="/contact" onClick={() => setMobileMenuOpen(false)}>Contact</Link>
-                  </Button>
-                  <Button variant="default" asChild>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        handleLogout();
-                      }}
-                    >
-                      Logout
-                    </button>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="outline" asChild>
-                    <Link to="/login" onClick={() => setMobileMenuOpen(false)}>Login</Link>
-                  </Button>
-                  <Button variant="default" asChild>
-                    <Link to="/register" onClick={() => setMobileMenuOpen(false)}>Register</Link>
-                  </Button>
-                </>
-              )}
-            </div>
+                {currentUser ? (
+                  <>
+                    <Button variant="outline" asChild>
+                      <Link to="/contact" onClick={() => setMobileMenuOpen(false)}>Contact</Link>
+                    </Button>
+                    <Button variant="default" asChild>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          handleLogout();
+                        }}
+                      >
+                        Logout
+                      </button>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" asChild>
+                      <Link to="/login" onClick={() => setMobileMenuOpen(false)}>Login</Link>
+                    </Button>
+                    <Button variant="default" asChild>
+                      <Link to="/register" onClick={() => setMobileMenuOpen(false)}>Register</Link>
+                    </Button>
+                  </>
+                )}
+              </div>
             </nav>
           </div>
         )}

@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -607,8 +607,7 @@ export function AdminDashboard() {
                         className="flex items-start gap-3 pb-4 border-b last:border-0"
                       >
                         <div
-                          className={`p-2 rounded-lg ${
-                            activity.type === "enrollment"
+                          className={`p-2 rounded-lg ${activity.type === "enrollment"
                               ? "bg-blue-100 dark:bg-blue-900/20"
                               : activity.type === "course"
                                 ? "bg-green-100 dark:bg-green-900/20"
@@ -617,11 +616,10 @@ export function AdminDashboard() {
                                   : activity.type === "report"
                                     ? "bg-red-100 dark:bg-red-900/20"
                                     : "bg-yellow-100 dark:bg-yellow-900/20"
-                          }`}
+                            }`}
                         >
                           <Activity
-                            className={`h-5 w-5 ${
-                              activity.type === "enrollment"
+                            className={`h-5 w-5 ${activity.type === "enrollment"
                                 ? "text-blue-600 dark:text-blue-400"
                                 : activity.type === "course"
                                   ? "text-green-600 dark:text-green-400"
@@ -630,7 +628,7 @@ export function AdminDashboard() {
                                     : activity.type === "report"
                                       ? "text-red-600 dark:text-red-400"
                                       : "text-yellow-600 dark:text-yellow-400"
-                            }`}
+                              }`}
                           />
                         </div>
                         <div className="flex-1">

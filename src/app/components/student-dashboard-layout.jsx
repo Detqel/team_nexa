@@ -1,19 +1,16 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
+  User,
   BookOpen,
-  Plus,
-  Upload,
-  Users,
-  BarChart3,
-  DollarSign,
-  FileText,
-  Trophy,
+  Heart,
+  MessageSquare,
+  Bell,
+  Award,
   Settings,
   LogOut,
   GraduationCap,
   Home,
-  ChevronLeft,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -29,23 +26,46 @@ import {
   SidebarFooter,
   SidebarTrigger,
 } from "./ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
 import { getUser, logout } from "../lib/auth";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard",       href: "/instructor-dashboard" },
-  { icon: BookOpen,        label: "Manage Courses",  href: "/instructor-dashboard/courses" },
-  { icon: Plus,            label: "Create Course",   href: "/instructor-dashboard/create" },
-  { icon: Upload,          label: "Upload Videos",   href: "/instructor-dashboard/upload" },
-  { icon: Users,           label: "Students",        href: "/instructor-dashboard/students" },
-  { icon: BarChart3,       label: "Analytics",       href: "/instructor-dashboard/analytics" },
-  { icon: DollarSign,      label: "Earnings",        href: "/instructor-dashboard/earnings" },
-  { icon: FileText,        label: "Assignments",     href: "/instructor-dashboard/assignments" },
-  { icon: Trophy,          label: "Quiz Management", href: "/instructor-dashboard/quiz" },
-  { icon: Settings,        label: "Settings",        href: "/instructor-dashboard/settings" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+  { icon: User, label: "Profile", href: "/dashboard/profile" },
+  { icon: BookOpen, label: "My Courses", href: "/dashboard/my-courses" },
+  { icon: Heart, label: "Wishlist", href: "/dashboard/wishlist" },
+  { icon: MessageSquare, label: "Messages", href: "/dashboard/messages" },
+  { icon: Bell, label: "Notifications", href: "/dashboard/notifications" },
+  { icon: Award, label: "Certificates", href: "/dashboard/certificates" },
+  { icon: Settings, label: "Settings", href: "/dashboard/settings" },
 ];
 
-export function InstructorLayout({ children }) {
+export function DashboardHeader({ title, description, action }) {
+  const user = getUser();
+
+  return (
+    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div>
+        <h1 className="text-3xl font-bold">{title}</h1>
+        {description && <p className="text-muted-foreground mt-1">{description}</p>}
+      </div>
+      <div className="flex items-center gap-3">
+        {action}
+        <Avatar className="h-10 w-10 ring-2 ring-primary/20">
+          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "student"}`} />
+          <AvatarFallback>{user?.name?.[0] || "U"}</AvatarFallback>
+        </Avatar>
+        <div className="text-right text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">{user?.name || "Student"}</p>
+          <p className="capitalize">{user?.role || "student"}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StudentDashboardLayout({ children }) {
   const location = useLocation();
 
   const handleLogout = () => {
@@ -55,15 +75,13 @@ export function InstructorLayout({ children }) {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        {/* ── Sidebar ── */}
         <Sidebar className="border-r">
           <SidebarHeader className="border-b px-6 py-4">
-            <Link to="/" className="flex items-center gap-2 group">
-              <GraduationCap className="h-6 w-6 text-primary transition-transform group-hover:rotate-6" />
+            <Link to="/" className="flex items-center gap-2">
+              <GraduationCap className="h-6 w-6 text-primary" />
               <span className="font-bold text-lg">NexaLearn</span>
             </Link>
           </SidebarHeader>
-
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupContent>
@@ -85,20 +103,12 @@ export function InstructorLayout({ children }) {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
-
           <SidebarFooter className="border-t p-4 space-y-1">
-            {/* Back to Home */}
+            {/* ADDED: Back to Home button */}
             <Button variant="ghost" className="w-full justify-start" asChild>
               <Link to="/">
                 <Home className="h-5 w-5 mr-3" />
                 Back to Home
-              </Link>
-            </Button>
-            {/* Switch to Student View */}
-            <Button variant="ghost" className="w-full justify-start" asChild>
-              <Link to="/dashboard">
-                <ChevronLeft className="h-5 w-5 mr-3" />
-                Student View
               </Link>
             </Button>
             <Button
@@ -112,43 +122,30 @@ export function InstructorLayout({ children }) {
           </SidebarFooter>
         </Sidebar>
 
-        {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-h-screen min-w-0">
-          {/* Top header — visible on ALL screen sizes */}
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b bg-background px-4">
+          {/* FIXED: removed lg:hidden so header shows on desktop too */}
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b bg-background px-4">
             <SidebarTrigger />
-
-            {/* Mobile: show logo */}
+            {/* Mobile: show logo text */}
             <span className="font-semibold lg:hidden">NexaLearn</span>
-
-            {/* Desktop: breadcrumb with Home link */}
+            {/* Desktop: show breadcrumb */}
             <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground">
-              <Link
-                to="/"
-                className="flex items-center gap-1 hover:text-foreground transition-colors"
-              >
+              <Link to="/" className="flex items-center gap-1 hover:text-foreground transition-colors">
                 <Home className="h-4 w-4" />
                 Home
               </Link>
               <span>/</span>
-              <span className="text-foreground font-medium">Instructor Dashboard</span>
+              <span className="text-foreground font-medium">Dashboard</span>
             </div>
-
-            {/* Right side */}
-            <div className="flex items-center gap-2 ml-auto">
-              <Button variant="outline" size="sm" asChild className="hidden sm:flex">
-                <Link to="/dashboard">
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Student View
-                </Link>
-              </Button>
+            {/* ADDED: ThemeToggle on the right */}
+            <div className="ml-auto">
               <ThemeToggle />
             </div>
           </header>
-
-          {/* Page content */}
           <div className="flex-1 overflow-auto bg-background">
-            {children}
+            <div className="container mx-auto p-4 sm:p-6 space-y-6">
+              {children}
+            </div>
           </div>
         </div>
       </div>

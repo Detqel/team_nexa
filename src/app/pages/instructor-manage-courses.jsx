@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 import {
   BookOpen, Plus, Eye, Edit, Trash2, MoreVertical,
   Search, Filter, Star, Users, DollarSign, Clock, CheckCircle2,
