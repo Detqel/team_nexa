@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "./components/theme-provider";
 import { Header } from "./components/header";
 import { Footer } from "./components/footer";
@@ -15,7 +15,6 @@ import { ContactPage } from "./pages/contact";
 import { MyCoursesPage } from "./pages/my-courses";
 import { WishlistPage } from "./pages/wishlist";
 import { CertificatesPage } from "./pages/certificates";
-// Instructor sub-pages
 import { ManageCoursesPage } from "./pages/instructor-manage-courses";
 import { CreateCoursePage } from "./pages/instructor-create-course";
 import { UploadVideosPage } from "./pages/instructor-upload-videos";
@@ -28,20 +27,26 @@ import { InstructorSettingsPage } from "./pages/instructor-settings";
 import { MessagesPage } from "./pages/messages";
 import { NotificationsPage } from "./pages/notifications";
 import { SettingsPage } from "./pages/settings";
+import { ProfilePage } from "./pages/profile";
 import { Toaster } from "./components/ui/sonner";
+import { isAuthenticated } from "./lib/auth";
 
 function NotFoundPage() {
   return (
     <div className="container mx-auto px-4 py-20 text-center">
       <h1 className="text-4xl font-bold">Page Not Found</h1>
-      <p className="text-muted-foreground mt-4">The page you were looking for doesn’t exist.</p>
+      <p className="text-muted-foreground mt-4">The page you were looking for doesn't exist.</p>
     </div>
   );
 }
 
 function RequireAuth({ children }) {
-  const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-  return currentUser ? children : <Navigate to="/login" replace />;
+  const location = useLocation();
+  if (!isAuthenticated()) {
+    const redirect = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/login?redirect=${redirect}`} replace />;
+  }
+  return children;
 }
 
 export default function App() {
@@ -49,20 +54,19 @@ export default function App() {
     <ThemeProvider>
       <BrowserRouter>
         <Routes>
-          {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* Student Dashboard Routes */}
-          <Route path="/dashboard/messages" element={<RequireAuth><MessagesPage /></RequireAuth>} />
-          <Route path="/dashboard/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
           <Route path="/dashboard" element={<RequireAuth><StudentDashboard /></RequireAuth>} />
+          <Route path="/dashboard/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
           <Route path="/dashboard/my-courses" element={<RequireAuth><MyCoursesPage /></RequireAuth>} />
           <Route path="/dashboard/wishlist" element={<RequireAuth><WishlistPage /></RequireAuth>} />
+          <Route path="/dashboard/messages" element={<RequireAuth><MessagesPage /></RequireAuth>} />
+          <Route path="/dashboard/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
           <Route path="/dashboard/certificates" element={<RequireAuth><CertificatesPage /></RequireAuth>} />
+          <Route path="/dashboard/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
           <Route path="/dashboard/*" element={<RequireAuth><StudentDashboard /></RequireAuth>} />
 
-          {/* Instructor Dashboard Routes */}
           <Route path="/instructor-dashboard" element={<RequireAuth><InstructorDashboard /></RequireAuth>} />
           <Route path="/instructor-dashboard/courses" element={<RequireAuth><ManageCoursesPage /></RequireAuth>} />
           <Route path="/instructor-dashboard/create" element={<RequireAuth><CreateCoursePage /></RequireAuth>} />
@@ -78,10 +82,8 @@ export default function App() {
           <Route path="/instructor-dashboard/certificates" element={<RequireAuth><CertificatesPage /></RequireAuth>} />
           <Route path="/instructor-dashboard/*" element={<RequireAuth><InstructorDashboard /></RequireAuth>} />
 
-          {/* Admin Routes */}
           <Route path="/admin/*" element={<AdminDashboard />} />
 
-          {/* Main Routes (With Header/Footer) */}
           <Route
             path="/*"
             element={
@@ -91,11 +93,11 @@ export default function App() {
                   <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/courses" element={<RequireAuth><CoursesPage /></RequireAuth>} />
-                    <Route path="/categories" element={<RequireAuth><Categories /></RequireAuth>} />
+                    <Route path="/categories" element={<Categories />} />
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/instructors" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-4xl font-bold">Instructors</h1><p className="text-muted-foreground mt-4">Coming soon...</p></div>} />
-                    <Route path="/contact" element={<RequireAuth><ContactPage /></RequireAuth>} />
-                    <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
+                    <Route path="/contact" element={<ContactPage />} />
+                    <Route path="/settings" element={<Navigate to="/dashboard/settings" replace />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Routes>
                 </main>

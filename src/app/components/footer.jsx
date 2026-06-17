@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 import { GraduationCap, Facebook, Twitter, Instagram, Linkedin, Youtube, Mail } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
