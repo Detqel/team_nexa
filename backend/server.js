@@ -12,6 +12,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get("/api", (req, res) => {
+  res.json({ message: "API root working" });
+});
+
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "NexaLearn API is running" });
 });
@@ -19,17 +23,22 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/courses", courseRoutes);
 
-app.use(errorHandler);
-
 const PORT = process.env.PORT || 5000;
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/nexalearn";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://mongo:27017/nexalearn";
+
 
 mongoose
   .connect(MONGODB_URI)
   .then(async () => {
     console.log("Connected to MongoDB");
-    await seedDatabase();
-    app.listen(PORT, () => {
+
+    try {
+      await seedDatabase();
+    } catch (err) {
+      console.log("Seeding skipped:", err.message);
+    }
+
+    app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on port ${PORT}`);
     });
   })
