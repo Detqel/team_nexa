@@ -8,12 +8,10 @@ import {
   MessageSquare,
   Bell,
   Settings,
-  LogOut,
   Heart,
   FileText,
   BarChart3,
   PlayCircle,
-  GraduationCap,
   Trophy,
   Target,
   Search,
@@ -39,37 +37,58 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-} from "../components/ui/sidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { toast } from "sonner";
+
+const WISHLIST_KEY = "nexa_wishlist_ids";
+
+function getStoredWishlistIds() {
+  try {
+    return JSON.parse(localStorage.getItem(WISHLIST_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveWishlistIds(ids) {
+  localStorage.setItem(WISHLIST_KEY, JSON.stringify(ids));
+}
+
+function WishlistHeartButton({ courseId, wishlisted, onToggle }) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle(courseId);
+      }}
+      className={[
+        "absolute top-3 left-3 z-10",
+        "w-8 h-8 rounded-full flex items-center justify-center",
+        "bg-white/90 backdrop-blur-sm shadow-md",
+        "border border-white/50",
+        "transition-all duration-200 hover:scale-110 active:scale-95",
+        "focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-1",
+      ].join(" ")}
+      aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+      title={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+    >
+      <Heart
+        className={[
+          "h-4 w-4 transition-all duration-200",
+          wishlisted
+            ? "fill-rose-500 text-rose-500 scale-110"
+            : "text-gray-400 hover:text-rose-400",
+        ].join(" ")}
+      />
+    </button>
+  );
+}
 
 export function MyCoursesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
-
-  const menuItems = [
-    { icon: BarChart3, label: "Dashboard", href: "/dashboard" },
-    { icon: BookOpen, label: "My Courses", href: "/dashboard/my-courses", active: true },
-    { icon: Heart, label: "Wishlist", href: "/dashboard/wishlist" },
-    { icon: Award, label: "Certificates", href: "/dashboard/certificates" },
-    { icon: FileText, label: "Assignments", href: "/dashboard/assignments" },
-    { icon: Trophy, label: "Quiz", href: "/dashboard/quiz" },
-    { icon: Target, label: "Progress Tracking", href: "/dashboard/progress" },
-    { icon: MessageSquare, label: "Messages", href: "/dashboard/messages" },
-    { icon: Bell, label: "Notifications", href: "/dashboard/notifications" },
-    { icon: Settings, label: "Settings", href: "/settings" },
-  ];
+  const [wishlistedIds, setWishlistedIds] = useState(() => new Set(getStoredWishlistIds()));
 
   const allCourses = [
     {
@@ -86,6 +105,11 @@ export function MyCoursesPage() {
       rating: 4.9,
       category: "Web Development",
       enrolledDate: "March 15, 2026",
+      price: 29.99,
+      originalPrice: 99.99,
+      level: "Advanced",
+      students: 18420,
+      bestseller: true,
     },
     {
       id: 2,
@@ -101,6 +125,11 @@ export function MyCoursesPage() {
       rating: 4.8,
       category: "Design",
       enrolledDate: "April 2, 2026",
+      price: 24.99,
+      originalPrice: 84.99,
+      level: "Intermediate",
+      students: 11230,
+      bestseller: false,
     },
     {
       id: 3,
@@ -116,6 +145,11 @@ export function MyCoursesPage() {
       rating: 4.7,
       category: "Data Science",
       enrolledDate: "February 20, 2026",
+      price: 34.99,
+      originalPrice: 109.99,
+      level: "Intermediate",
+      students: 22100,
+      bestseller: true,
     },
     {
       id: 4,
@@ -131,6 +165,11 @@ export function MyCoursesPage() {
       rating: 4.6,
       category: "Web Development",
       enrolledDate: "January 10, 2026",
+      price: 19.99,
+      originalPrice: 59.99,
+      level: "Beginner",
+      students: 34500,
+      bestseller: false,
     },
     {
       id: 5,
@@ -146,6 +185,11 @@ export function MyCoursesPage() {
       rating: 4.8,
       category: "Web Development",
       enrolledDate: "December 5, 2025",
+      price: 22.99,
+      originalPrice: 79.99,
+      level: "Beginner",
+      students: 41200,
+      bestseller: true,
     },
     {
       id: 6,
@@ -161,26 +205,50 @@ export function MyCoursesPage() {
       rating: 4.9,
       category: "Backend",
       enrolledDate: "May 28, 2026",
+      price: 27.99,
+      originalPrice: 89.99,
+      level: "Intermediate",
+      students: 9870,
+      bestseller: false,
     },
   ];
 
+  const toggleWishlist = (courseId) => {
+    setWishlistedIds((prev) => {
+      const next = new Set(prev);
+      const course = allCourses.find((c) => c.id === courseId);
+      if (next.has(courseId)) {
+        next.delete(courseId);
+        toast.success(`Removed "${course?.title}" from wishlist`, { icon: "🤍", duration: 2000 });
+      } else {
+        next.add(courseId);
+        toast.success(`Added "${course?.title}" to wishlist`, { icon: "❤️", duration: 2000 });
+      }
+      saveWishlistIds([...next]);
+      return next;
+    });
+  };
+
   const filtered = allCourses.filter((c) => {
-    const matchesSearch = c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch =
+      c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.instructor.toLowerCase().includes(searchTerm.toLowerCase());
     if (filter === "all") return matchesSearch;
+    if (filter === "wishlisted") return matchesSearch && wishlistedIds.has(c.id);
     return matchesSearch && c.status === filter;
   });
 
   const stats = [
-    { label: "Total Enrolled", value: allCourses.length, color: "from-blue-500 to-cyan-500" },
-    { label: "In Progress", value: allCourses.filter(c => c.status === "in-progress").length, color: "from-yellow-500 to-orange-500" },
-    { label: "Completed", value: allCourses.filter(c => c.status === "completed").length, color: "from-green-500 to-emerald-500" },
-    { label: "Not Started", value: allCourses.filter(c => c.status === "not-started").length, color: "from-gray-400 to-gray-600" },
+    { label: "Total Enrolled", value: allCourses.length,                                         color: "from-blue-500 to-cyan-500"     },
+    { label: "In Progress",    value: allCourses.filter(c => c.status === "in-progress").length,  color: "from-yellow-500 to-orange-500" },
+    { label: "Completed",      value: allCourses.filter(c => c.status === "completed").length,    color: "from-green-500 to-emerald-500" },
+    { label: "Wishlisted",     value: wishlistedIds.size,                                         color: "from-rose-500 to-pink-500"     },
   ];
 
   return (
     <div className="flex-1 overflow-auto">
       <div className="container mx-auto p-6 space-y-6">
+
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -195,12 +263,7 @@ export function MyCoursesPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {stats.map((stat, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-            >
+            <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
               <Card className="text-center">
                 <CardContent className="pt-6 pb-4">
                   <p className={`text-3xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>
@@ -225,7 +288,7 @@ export function MyCoursesPage() {
             />
           </div>
           <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
@@ -234,11 +297,17 @@ export function MyCoursesPage() {
               <SelectItem value="in-progress">In Progress</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="not-started">Not Started</SelectItem>
+              <SelectItem value="wishlisted">
+                <span className="flex items-center gap-1.5">
+                  <Heart className="h-3.5 w-3.5 fill-rose-500 text-rose-500" />
+                  Wishlisted
+                </span>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Courses Grid */}
+        {/* Courses */}
         <Tabs defaultValue="grid">
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm text-muted-foreground">{filtered.length} courses found</p>
@@ -248,15 +317,11 @@ export function MyCoursesPage() {
             </TabsList>
           </div>
 
+          {/* Grid View */}
           <TabsContent value="grid">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {filtered.map((course, index) => (
-                <motion.div
-                  key={course.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.08 }}
-                >
+                <motion.div key={course.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.08 }}>
                   <Card className="group hover:shadow-xl transition-all overflow-hidden h-full flex flex-col">
                     <div className="relative">
                       <img
@@ -265,6 +330,15 @@ export function MyCoursesPage() {
                         className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+
+                      {/* ❤️ Heart — top-left */}
+                      <WishlistHeartButton
+                        courseId={course.id}
+                        wishlisted={wishlistedIds.has(course.id)}
+                        onToggle={toggleWishlist}
+                      />
+
+                      {/* Status badge — top-right */}
                       {course.status === "completed" ? (
                         <div className="absolute top-3 right-3">
                           <Badge className="bg-green-500 text-white">
@@ -276,13 +350,12 @@ export function MyCoursesPage() {
                           <Badge variant="secondary">Not Started</Badge>
                         </div>
                       ) : null}
-                      <Button
-                        size="icon"
-                        className="absolute bottom-3 right-3 rounded-full bg-white/90 hover:bg-white hover:scale-110 transition-all"
-                      >
+
+                      <Button size="icon" className="absolute bottom-3 right-3 rounded-full bg-white/90 hover:bg-white hover:scale-110 transition-all">
                         <PlayCircle className="h-5 w-5 text-primary" />
                       </Button>
                     </div>
+
                     <CardHeader className="pb-2">
                       <Badge variant="outline" className="w-fit text-xs mb-1">{course.category}</Badge>
                       <CardTitle className="text-base line-clamp-2">{course.title}</CardTitle>
@@ -293,6 +366,7 @@ export function MyCoursesPage() {
                         {course.instructor}
                       </CardDescription>
                     </CardHeader>
+
                     <CardContent className="flex-1 space-y-3">
                       <div>
                         <div className="flex justify-between text-sm mb-1">
@@ -304,6 +378,7 @@ export function MyCoursesPage() {
                           {course.completedLessons}/{course.totalLessons} lessons
                         </p>
                       </div>
+
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-1 text-yellow-500">
                           <Star className="h-3 w-3 fill-current" />
@@ -314,18 +389,42 @@ export function MyCoursesPage() {
                           <span className="text-xs">{course.duration}</span>
                         </div>
                       </div>
-                      <Button
-                        className="w-full"
-                        variant={course.status === "completed" ? "outline" : "default"}
-                        size="sm"
-                      >
-                        {course.status === "completed" ? "Review Course" : course.status === "not-started" ? "Start Learning" : "Continue Learning"}
-                      </Button>
+
+                      <div className="flex gap-2">
+                        <Button
+                          className="flex-1"
+                          variant={course.status === "completed" ? "outline" : "default"}
+                          size="sm"
+                        >
+                          {course.status === "completed" ? "Review Course" : course.status === "not-started" ? "Start Learning" : "Continue Learning"}
+                        </Button>
+                        {/* ❤️ heart button in card footer */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={[
+                            "px-2.5 transition-colors",
+                            wishlistedIds.has(course.id)
+                              ? "border-rose-300 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:border-rose-800"
+                              : "hover:border-rose-300 hover:bg-rose-50",
+                          ].join(" ")}
+                          onClick={() => toggleWishlist(course.id)}
+                          title={wishlistedIds.has(course.id) ? "Remove from wishlist" : "Add to wishlist"}
+                        >
+                          <Heart
+                            className={[
+                              "h-4 w-4 transition-all",
+                              wishlistedIds.has(course.id) ? "fill-rose-500 text-rose-500" : "text-gray-400",
+                            ].join(" ")}
+                          />
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </motion.div>
               ))}
             </div>
+
             {filtered.length === 0 && (
               <div className="text-center py-16">
                 <BookOpen className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
@@ -335,23 +434,38 @@ export function MyCoursesPage() {
             )}
           </TabsContent>
 
+          {/* List View */}
           <TabsContent value="list">
             <div className="space-y-4">
               {filtered.map((course, index) => (
-                <motion.div
-                  key={course.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.06 }}
-                >
+                <motion.div key={course.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.06 }}>
                   <Card className="group hover:shadow-lg transition-all">
                     <CardContent className="p-4">
                       <div className="flex gap-4 items-center">
-                        <img
-                          src={course.thumbnail}
-                          alt={course.title}
-                          className="w-24 h-16 rounded-lg object-cover flex-shrink-0"
-                        />
+                        <div className="relative w-24 h-16 flex-shrink-0">
+                          <img
+                            src={course.thumbnail}
+                            alt={course.title}
+                            className="w-full h-full rounded-lg object-cover"
+                          />
+                          {/* ❤️ heart on list thumbnail */}
+                          <button
+                            onClick={() => toggleWishlist(course.id)}
+                            className={[
+                              "absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-md border border-white",
+                              wishlistedIds.has(course.id) ? "bg-rose-500" : "bg-white hover:bg-rose-50",
+                            ].join(" ")}
+                            title={wishlistedIds.has(course.id) ? "Remove from wishlist" : "Add to wishlist"}
+                          >
+                            <Heart
+                              className={[
+                                "h-3 w-3 transition-all",
+                                wishlistedIds.has(course.id) ? "fill-white text-white" : "text-gray-400",
+                              ].join(" ")}
+                            />
+                          </button>
+                        </div>
+
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <div>
@@ -369,12 +483,17 @@ export function MyCoursesPage() {
                             <div className="flex-1">
                               <Progress value={course.progress} className="h-1.5" />
                             </div>
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">{course.progress}% • {course.completedLessons}/{course.totalLessons} lessons</span>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {course.progress}% • {course.completedLessons}/{course.totalLessons} lessons
+                            </span>
                           </div>
                         </div>
-                        <Button size="sm" variant={course.status === "completed" ? "outline" : "default"} className="flex-shrink-0 hidden sm:flex">
-                          {course.status === "completed" ? "Review" : course.status === "not-started" ? "Start" : "Continue"}
-                        </Button>
+
+                        <div className="flex-shrink-0 hidden sm:flex gap-2">
+                          <Button size="sm" variant={course.status === "completed" ? "outline" : "default"}>
+                            {course.status === "completed" ? "Review" : course.status === "not-started" ? "Start" : "Continue"}
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -387,4 +506,3 @@ export function MyCoursesPage() {
     </div>
   );
 }
-

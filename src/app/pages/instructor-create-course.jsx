@@ -35,11 +35,25 @@ export function CreateCoursePage() {
     title: "", subtitle: "", description: "", category: "", level: "", language: "English",
     tags: [], tagInput: "",
     sections: [{ id: 1, title: "Introduction", lessons: [{ id: 1, title: "Welcome to the course", type: "video", duration: "" }] }],
-    thumbnail: null, promoVideo: "",
+    thumbnail: null,promoVideo: "",videoFile: null,
     price: "", originalPrice: "", isFree: false,
     isPublic: true, isCertificate: true, allowPreview: true,
   });
+   const handleThumbnailUpload = (e) => {
+  const file = e.target.files[0];
 
+  if (file) {
+    set("thumbnail", file);
+  }
+};
+
+const handleVideoUpload = (e) => {
+  const file = e.target.files[0];
+
+  if (file) {
+    set("videoFile", file);
+  }
+};
   const set = (key, val) => setForm((p) => ({ ...p, [key]: val }));
 
   const addTag = () => {
@@ -291,7 +305,34 @@ export function CreateCoursePage() {
                   <div className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/30 transition-colors">
                     <Video className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">MP4, MOV up to 500MB</p>
-                    <Button variant="outline" size="sm" className="mt-2"><Upload className="h-4 w-4 mr-2" />Upload Video</Button>
+                   <input
+  type="file"
+  accept="video/mp4,video/mov,video/avi"
+  id="video-upload"
+  className="hidden"
+  onChange={handleVideoUpload}
+/>
+
+<label htmlFor="video-upload">
+  <Button
+    variant="outline"
+    size="sm"
+    className="mt-2"
+    type="button"
+    asChild
+  >
+    <span>
+      <Upload className="h-4 w-4 mr-2" />
+      Upload Video
+    </span>
+  </Button>
+</label>
+
+{form.videoFile && (
+  <p className="mt-2 text-sm text-green-600">
+    Selected: {form.videoFile.name}
+  </p>
+)}
                   </div>
                 </div>
               </CardContent>
