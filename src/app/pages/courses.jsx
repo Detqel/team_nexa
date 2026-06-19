@@ -36,46 +36,64 @@ import { coursesApi } from "../lib/api";
 import { getUser, updateStoredUser } from "../lib/auth";
 import { toast } from "sonner";
 
-// ── shared keys — must match WishlistPage ────────────────────────────────────
-const WISHLIST_KEY         = "nexa_wishlist_ids";
-const WISHLIST_COURSES_KEY = "nexa_wishlist_courses";
+// ── shared localStorage keys — must match WishlistPage & CreateCoursePage ────
+const WISHLIST_KEY          = "nexa_wishlist_ids";
+const WISHLIST_COURSES_KEY  = "nexa_wishlist_courses";
+const PUBLISHED_COURSES_KEY = "nexa_published_courses";   // ← new
 
+// ── localStorage helpers ─────────────────────────────────────────────────────
 function getStoredWishlistIds() {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(WISHLIST_KEY) || "[]"));
-  } catch {
-    return new Set();
-  }
+  try { return new Set(JSON.parse(localStorage.getItem(WISHLIST_KEY) || "[]")); }
+  catch { return new Set(); }
 }
-
 function saveWishlistIds(ids) {
   localStorage.setItem(WISHLIST_KEY, JSON.stringify([...ids]));
 }
-
 function getStoredWishlistCourses() {
-  try {
-    return JSON.parse(localStorage.getItem(WISHLIST_COURSES_KEY) || "[]");
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(WISHLIST_COURSES_KEY) || "[]"); }
+  catch { return []; }
 }
-
 function saveWishlistCourses(courses) {
   localStorage.setItem(WISHLIST_COURSES_KEY, JSON.stringify(courses));
 }
 
+// ── read courses published via CreateCoursePage ──────────────────────────────
+function getPublishedCourses() {
+  try { return JSON.parse(localStorage.getItem(PUBLISHED_COURSES_KEY) || "[]"); }
+  catch { return []; }
+}
+
+// Fill in any fields the card expects that CreateCoursePage might not set
+function normalizePublished(course) {
+  return {
+    reviews:    0,
+    students:   0,
+    rating:     0,
+    bestseller: false,
+    // Estimate a readable duration from lesson count if not already set
+    duration:
+      course.duration ||
+      (course.totalLessons
+        ? `${Math.ceil(course.totalLessons * 0.5)}h total`
+        : "N/A"),
+    lessons: course.totalLessons || course.lessons || 0,
+    ...course, // actual stored values always win
+  };
+}
+
+// ── filter constants ─────────────────────────────────────────────────────────
 const PRICE_FILTERS = [
   { id: "all",      label: "All Prices",   min: null,   max: null   },
   { id: "free",     label: "Free",         min: 0,      max: 0      },
   { id: "under50",  label: "Under $50",    min: 0.01,   max: 49.99  },
-  { id: "50-100",   label: "$50 - $100",   min: 50,     max: 100    },
+  { id: "50-100",   label: "$50 – $100",   min: 50,     max: 100    },
   { id: "over100",  label: "Over $100",    min: 100.01, max: null   },
 ];
 
 const DURATION_FILTERS = [
   { id: "all",    label: "Any Duration",    min: null, max: null },
   { id: "short",  label: "Under 20 hours", min: 0,    max: 20   },
-  { id: "medium", label: "20 - 35 hours",  min: 20,   max: 35   },
+  { id: "medium", label: "20 – 35 hours",  min: 20,   max: 35   },
   { id: "long",   label: "Over 35 hours",  min: 35,   max: null },
 ];
 
@@ -84,6 +102,37 @@ function formatPrice(price) {
   return `$${Number(price).toFixed(2)}`;
 }
 
+// ── apply the same active filters to a list of courses client-side ───────────
+// Used for localStorage courses that never pass through the backend API.
+function applyFiltersLocally(courses, {
+  search, selectedCategories, selectedLevels,
+  selectedPrice, selectedRating,
+}) {
+  const priceFilter = PRICE_FILTERS.find((p) => p.id === selectedPrice);
+
+  return courses.filter((c) => {
+    // text search
+    if (search) {
+      const q = search.toLowerCase();
+      if (
+        !c.title?.toLowerCase().includes(q) &&
+        !c.instructor?.toLowerCase().includes(q)
+      ) return false;
+    }
+    // category
+    if (selectedCategories.length > 0 && !selectedCategories.includes(c.category)) return false;
+    // level
+    if (selectedLevels.length > 0 && !selectedLevels.includes(c.level)) return false;
+    // rating
+    if (selectedRating && c.rating < selectedRating) return false;
+    // price
+    if (priceFilter?.min != null && c.price < priceFilter.min) return false;
+    if (priceFilter?.max != null && c.price > priceFilter.max) return false;
+    return true;
+  });
+}
+
+// ── component ────────────────────────────────────────────────────────────────
 export function CoursesPage() {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedLevels,     setSelectedLevels]     = useState([]);
@@ -116,19 +165,23 @@ export function CoursesPage() {
       .catch(() => {});
   }, []);
 
-  // ── sync wishlist from other tabs ───────────────────────────────────────────
+  // ── sync wishlist + published courses from other tabs / pages ───────────────
   useEffect(() => {
     const onStorage = (e) => {
-      if (e.key === WISHLIST_KEY) setWishlistedIds(getStoredWishlistIds());
+      if (e.key === WISHLIST_KEY)          setWishlistedIds(getStoredWishlistIds());
+      // A new course was published — trigger a re-fetch so it shows up
+      if (e.key === PUBLISHED_COURSES_KEY) fetchCourses();
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── fetch courses ───────────────────────────────────────────────────────────
+  // ── fetch courses (API + localStorage merge) ────────────────────────────────
   const fetchCourses = useCallback(async () => {
     setLoading(true);
     try {
+      // 1️⃣  Build API params
       const params = { sort: sortOption };
       if (debouncedSearch.trim())        params.search      = debouncedSearch.trim();
       if (selectedCategories.length > 0) params.category    = selectedCategories.join(",");
@@ -143,8 +196,28 @@ export function CoursesPage() {
       if (durationFilter?.min != null) params.durationMin = durationFilter.min;
       if (durationFilter?.max != null) params.durationMax = durationFilter.max;
 
-      const data = await coursesApi.getAll(params);
-      setCourses(data.courses || []);
+      // 2️⃣  Fetch from backend
+      const data       = await coursesApi.getAll(params);
+      const apiCourses = data.courses || [];
+      const apiIds     = new Set(apiCourses.map((c) => c.id));
+
+      // 3️⃣  Load & normalize courses published via CreateCoursePage
+      const localPublished = getPublishedCourses()
+        .map(normalizePublished)
+        // Don't duplicate a course that's already returned by the API
+        .filter((c) => !apiIds.has(c.id));
+
+      // 4️⃣  Apply the active filters client-side to local courses
+      const filteredLocal = applyFiltersLocally(localPublished, {
+        search:             debouncedSearch.trim(),
+        selectedCategories,
+        selectedLevels,
+        selectedPrice,
+        selectedRating,
+      });
+
+      // 5️⃣  Newest published courses appear at the top
+      setCourses([...filteredLocal, ...apiCourses]);
     } catch {
       toast.error("Failed to load courses. Please try again.");
       setCourses([]);
@@ -193,9 +266,9 @@ export function CoursesPage() {
     }
 
     setWishlistedIds((prev) => {
-      const next      = new Set(prev);
-      const course    = courses.find((c) => c.id === courseId);
-      const removing  = next.has(courseId);
+      const next     = new Set(prev);
+      const course   = courses.find((c) => c.id === courseId);
+      const removing = next.has(courseId);
 
       if (removing) {
         next.delete(courseId);
@@ -207,7 +280,6 @@ export function CoursesPage() {
 
       saveWishlistIds(next);
 
-      // persist full course object so WishlistPage can render it
       if (course) {
         const stored = getStoredWishlistCourses();
         if (!removing) {
@@ -477,9 +549,17 @@ export function CoursesPage() {
                               Bestseller
                             </Badge>
                           )}
-                          <Badge variant="secondary" className="absolute top-3 right-3 z-10">
-                            {course.level}
-                          </Badge>
+                          {/* "New" badge for locally published courses */}
+                          {course.publishedAt && !course.bestseller && (
+                            <Badge className="absolute top-3 right-3 bg-indigo-500 text-white z-10">
+                              New
+                            </Badge>
+                          )}
+                          {!course.publishedAt && (
+                            <Badge variant="secondary" className="absolute top-3 right-3 z-10">
+                              {course.level}
+                            </Badge>
+                          )}
 
                           {/* Play overlay on hover */}
                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
@@ -495,7 +575,7 @@ export function CoursesPage() {
                           <CardDescription className="flex items-center gap-2">
                             <Avatar className="h-6 w-6">
                               <AvatarImage src={course.avatar} />
-                              <AvatarFallback>{course.instructor[0]}</AvatarFallback>
+                              <AvatarFallback>{course.instructor?.[0]}</AvatarFallback>
                             </Avatar>
                             <span>{course.instructor}</span>
                           </CardDescription>
@@ -508,12 +588,16 @@ export function CoursesPage() {
                               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                               <span className="font-semibold">{course.rating}</span>
                               <span className="text-muted-foreground">
-                                ({course.reviews?.toLocaleString()})
+                                ({(course.reviews || 0).toLocaleString()})
                               </span>
                             </div>
                             <div className="flex items-center gap-1 text-muted-foreground">
                               <Users className="h-4 w-4" />
-                              <span>{(course.students / 1000).toFixed(1)}k</span>
+                              <span>
+                                {course.students >= 1000
+                                  ? `${(course.students / 1000).toFixed(1)}k`
+                                  : course.students || 0}
+                              </span>
                             </div>
                           </div>
                           <div className="flex items-center justify-between text-sm text-muted-foreground">

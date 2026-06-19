@@ -39,10 +39,12 @@ import {
 import { StudentDashboardLayout, DashboardHeader } from "../components/student-dashboard-layout";
 import { toast } from "sonner";
 
-// ── shared keys — must match CoursesPage ─────────────────────────────────────
+// ── shared localStorage keys — must match CoursesPage & MyCoursesPage ─────────
+// Defined inline here so this file never breaks due to a missing constants file.
 const WISHLIST_KEY         = "nexa_wishlist_ids";
 const WISHLIST_COURSES_KEY = "nexa_wishlist_courses";
 
+// ── localStorage helpers ──────────────────────────────────────────────────────
 function getStoredWishlistIds() {
   try {
     return new Set(JSON.parse(localStorage.getItem(WISHLIST_KEY) || "[]"));
@@ -68,12 +70,12 @@ function saveWishlistCourses(courses) {
 }
 
 export function WishlistPage() {
-  const [searchTerm,      setSearchTerm]      = useState("");
-  const [sortBy,          setSortBy]          = useState("recent");
-  const [wishlistedIds,   setWishlistedIds]   = useState(() => getStoredWishlistIds());
-  const [storedCourses,   setStoredCourses]   = useState(() => getStoredWishlistCourses());
+  const [searchTerm,            setSearchTerm]            = useState("");
+  const [sortBy,                setSortBy]                = useState("recent");
+  const [wishlistedIds,         setWishlistedIds]         = useState(() => getStoredWishlistIds());
+  const [storedCourses,         setStoredCourses]         = useState(() => getStoredWishlistCourses());
 
-  // ── sync when CoursesPage (or another tab) updates localStorage ─────────────
+  // ── sync when CoursesPage or MyCoursesPage updates localStorage ─────────────
   useEffect(() => {
     const onStorage = (e) => {
       if (e.key === WISHLIST_KEY)         setWishlistedIds(getStoredWishlistIds());
@@ -83,10 +85,10 @@ export function WishlistPage() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // derive the visible wishlist — only courses whose id is still in the id-set
+  // Derive visible wishlist — only courses whose id is still in the id-set
   const wishlist = storedCourses.filter((c) => wishlistedIds.has(c.id));
 
-  // ── remove (with confirm dialog) ────────────────────────────────────────────
+  // ── remove with confirm dialog ────────────────────────────────────────────
   const removeFromWishlist = (id) => {
     const course = storedCourses.find((c) => c.id === id);
 
@@ -106,7 +108,7 @@ export function WishlistPage() {
     toast.success(`Removed "${course?.title}" from wishlist`, { icon: "🤍", duration: 2000 });
   };
 
-  // ── heart toggle (add back or remove) ───────────────────────────────────────
+  // ── heart toggle (add back or remove) ────────────────────────────────────
   const toggleWishlist = (id) => {
     const course = storedCourses.find((c) => c.id === id);
 
@@ -129,7 +131,7 @@ export function WishlistPage() {
     toast.success(`Enrolled in "${course?.title}"! 🎉`);
   };
 
-  // ── filter + sort ────────────────────────────────────────────────────────────
+  // ── filter + sort ─────────────────────────────────────────────────────────
   let filtered = wishlist.filter(
     (c) =>
       c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -139,12 +141,12 @@ export function WishlistPage() {
   if (sortBy === "price-high") filtered = [...filtered].sort((a, b) => b.price - a.price);
   if (sortBy === "rating")     filtered = [...filtered].sort((a, b) => b.rating - a.rating);
 
-  // ── totals ───────────────────────────────────────────────────────────────────
+  // ── totals ────────────────────────────────────────────────────────────────
   const totalSavings    = wishlist.reduce((acc, c) => acc + ((c.originalPrice || c.price) - c.price), 0);
   const totalOriginal   = wishlist.reduce((acc, c) => acc + (c.originalPrice || c.price), 0);
   const totalDiscounted = wishlist.reduce((acc, c) => acc + c.price, 0);
 
-  // ── render ───────────────────────────────────────────────────────────────────
+  // ── render ────────────────────────────────────────────────────────────────
   return (
     <StudentDashboardLayout>
       <DashboardHeader

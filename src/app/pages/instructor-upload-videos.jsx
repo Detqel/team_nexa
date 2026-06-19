@@ -1,8 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Upload, Video, X, CheckCircle2, Clock, AlertCircle,
-  FileVideo, Play, Trash2, MoreVertical, RefreshCw,
+  FileVideo, Play, Trash2, MoreVertical, RefreshCw, BookOpen,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -16,6 +16,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 import { InstructorLayout } from "../components/instructor-sidebar";
+import { instructorCoursesApi } from "../lib/instructorCourses";
+import { toast } from "sonner";
 
 const mockUploaded = [
   { id: 1, name: "01-introduction.mp4", size: "245 MB", duration: "12:34", course: "Complete Web Development Bootcamp", status: "ready", uploadedAt: "2 days ago", thumbnail: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=120&h=70&fit=crop" },
@@ -89,17 +91,40 @@ const nextId = (prefix) => `${prefix}-${Date.now()}-${idCounter++}`;
 export function UploadVideosPage() {
   const [videos, setVideos] = useState(mockUploaded);
   const [uploadsList, setUploadsList] = useState([]);
-  const [selectedCourse, setSelectedCourse] = useState("");
+
+  // ── Courses now come from the instructor's real course list ──────────────
+  const [myCourses, setMyCourses] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+  const [selectedCourseId, setSelectedCourseId] = useState("");
+
   const [dragOver, setDragOver] = useState(false);
   const [courseWarning, setCourseWarning] = useState(false);
 
   const fileInputRef = useRef(null);
   const cancelledRef = useRef(new Set());
 
+  // ── Load instructor's courses on mount, and keep in sync with other tabs ──
+  useEffect(() => {
+    let unsubscribe;
+
+    instructorCoursesApi.getMyCourses()
+      .then(({ courses }) => setMyCourses(courses))
+      .catch(() => toast.error("Couldn't load your courses."))
+      .finally(() => setCoursesLoading(false));
+
+    unsubscribe = instructorCoursesApi.onCoursesUpdated((updatedCourses) => {
+      setMyCourses(updatedCourses);
+    });
+
+    return () => unsubscribe?.();
+  }, []);
+
+  const selectedCourse = myCourses.find((c) => c.id === selectedCourseId);
+
   const remove = (id) => setVideos((v) => v.filter((x) => x.id !== id));
 
   const openFileExplorer = () => {
-    if (!selectedCourse) {
+    if (!selectedCourseId) {
       setCourseWarning(true);
       setTimeout(() => setCourseWarning(false), 2500);
       return;
@@ -120,8 +145,10 @@ export function UploadVideosPage() {
   };
 
   // Simulates a chunked upload + processing pipeline for one file, then
-  // moves it into the Video Library so it's clearly shown as uploaded.
-  const simulateUpload = async (id, file, course) => {
+  // moves it into the Video Library AND appends it as a lesson in the
+  // selected course's curriculum — so it shows up on the website wherever
+  // that course's lessons are rendered (course page, player, etc.).
+  const simulateUpload = async (id, file, courseId, courseTitle) => {
     let progress = 0;
     while (progress < 100) {
       if (cancelledRef.current.has(id)) {
@@ -147,7 +174,7 @@ export function UploadVideosPage() {
       name: file.name,
       size: formatBytes(file.size),
       duration: formatDuration(meta.duration),
-      course,
+      course: courseTitle,
       status: "processing",
       uploadedAt: "Just now",
       thumbnail: meta.thumbnail,
@@ -158,23 +185,40 @@ export function UploadVideosPage() {
     // a real backend would transcode the file after the upload finishes.
     await sleep(1200);
     setVideos((prev) => prev.map((v) => (v.id === newVideo.id ? { ...v, status: "ready" } : v)));
+
+    // ── Auto-add to the course curriculum so it appears on the website ──────
+    try {
+      await instructorCoursesApi.addLessonToCourse(courseId, {
+        title: file.name,
+        duration: formatDuration(meta.duration),
+        videoId: newVideo.id,
+        thumbnail: meta.thumbnail,
+      });
+      toast.success(`"${file.name}" added to "${courseTitle}" curriculum`, {
+        icon: "🎓",
+        duration: 3000,
+      });
+    } catch {
+      toast.error(`Video uploaded, but couldn't add it to "${courseTitle}"'s curriculum.`);
+    }
   };
 
   const handleFiles = (fileList) => {
     const files = Array.from(fileList || []).filter((f) => f.type.startsWith("video/"));
     if (files.length === 0) return;
-    if (!selectedCourse) {
+    if (!selectedCourseId) {
       setCourseWarning(true);
       setTimeout(() => setCourseWarning(false), 2500);
       return;
     }
+    const courseTitle = selectedCourse?.title || "Untitled Course";
     for (const file of files) {
       const id = nextId("upload");
       setUploadsList((prev) => [
         ...prev,
-        { id, name: file.name, size: formatBytes(file.size), progress: 0, course: selectedCourse },
+        { id, name: file.name, size: formatBytes(file.size), progress: 0, course: courseTitle },
       ]);
-      simulateUpload(id, file, selectedCourse);
+      simulateUpload(id, file, selectedCourseId, courseTitle);
     }
   };
 
@@ -194,6 +238,11 @@ export function UploadVideosPage() {
     if (status === "processing") return <Badge className="bg-yellow-500 text-white text-xs gap-1"><RefreshCw className="h-3 w-3 animate-spin" />Processing</Badge>;
     return <Badge className="bg-red-500 text-white text-xs gap-1"><AlertCircle className="h-3 w-3" />Failed</Badge>;
   };
+
+  const totalLessonsInSelectedCourse = selectedCourse?.curriculum?.reduce(
+    (sum, section) => sum + (section.lessons?.length || 0),
+    0
+  );
 
   return (
     <InstructorLayout>
@@ -228,16 +277,35 @@ export function UploadVideosPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Assign to Course</Label>
-              <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+              <Select
+                value={selectedCourseId}
+                onValueChange={setSelectedCourseId}
+                disabled={coursesLoading}
+              >
                 <SelectTrigger className="max-w-sm">
-                  <SelectValue placeholder="Select a course" />
+                  <SelectValue placeholder={coursesLoading ? "Loading your courses…" : "Select a course"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {["Complete Web Development Bootcamp", "Advanced React & TypeScript", "JavaScript Essentials"].map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
+                  {myCourses.length === 0 && !coursesLoading ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      You haven't created any courses yet.
+                    </div>
+                  ) : (
+                    myCourses.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+
+              {selectedCourse && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  This course currently has {totalLessonsInSelectedCourse} lesson{totalLessonsInSelectedCourse !== 1 ? "s" : ""}.
+                  New uploads will be added automatically.
+                </p>
+              )}
+
               <AnimatePresence>
                 {courseWarning && (
                   <motion.p
@@ -366,7 +434,10 @@ export function UploadVideosPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{v.name}</p>
-                        <p className="text-xs text-muted-foreground">{v.course}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <BookOpen className="h-3 w-3" />
+                          {v.course}
+                        </p>
                         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{v.duration}</span>
                           <span>{v.size}</span>
@@ -399,6 +470,41 @@ export function UploadVideosPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Course Curriculum Preview — shows the video is really attached */}
+        {selectedCourse && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                "{selectedCourse.title}" Curriculum
+              </CardTitle>
+              <CardDescription>
+                This is what students will see on the course page — newly uploaded videos appear here automatically.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {selectedCourse.curriculum?.map((section) => (
+                <div key={section.id} className="border rounded-lg p-3">
+                  <p className="font-semibold text-sm mb-2">{section.title}</p>
+                  {section.lessons.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">No lessons yet — upload a video above to add one.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {section.lessons.map((lesson) => (
+                        <div key={lesson.id} className="flex items-center gap-2 text-sm py-1.5 px-2 rounded hover:bg-muted/40">
+                          <Video className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="flex-1 truncate">{lesson.title}</span>
+                          <span className="text-xs text-muted-foreground flex-shrink-0">{lesson.duration}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </InstructorLayout>
   );
