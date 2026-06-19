@@ -19,6 +19,7 @@ const formatUser = (user) => ({
   enrolledCourses: user.enrolledCourses?.map((id) => id.toString()) || [],
   wishlist: user.wishlist?.map((id) => id.toString()) || [],
   courseProgress: Object.fromEntries(user.courseProgress || new Map()),
+  createdAt: user.createdAt,
 });
 
 const generateToken = (userId) =>
@@ -100,12 +101,37 @@ const getMe = async (req, res) => {
   res.json({ user: formatUser(req.user) });
 };
 
+const updateProfileValidators = [
+  body("name").optional().trim().notEmpty().withMessage("Name cannot be empty").isLength({ max: 100 }),
+];
+
+const updateProfile = async (req, res, next) => {
+  try {
+    const { name } = req.body;
+
+    if (name !== undefined) {
+      req.user.name = name.trim();
+    }
+
+    await req.user.save();
+
+    res.json({
+      message: "Profile updated successfully.",
+      user: formatUser(req.user),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   registerValidators,
   loginValidators,
+  updateProfileValidators,
   validate,
   register,
   login,
   getMe,
+  updateProfile,
   formatUser,
 };

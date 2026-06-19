@@ -4,44 +4,58 @@ const courseSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: true,
+      required: [true, "Course title is required"],
       trim: true,
+      maxlength: [255, "Title cannot exceed 255 characters"],
     },
     instructor: {
       type: String,
-      required: true,
+      required: [true, "Instructor name is required"],
       trim: true,
     },
-    avatar: String,
+    avatar: {
+      type: String,
+      trim: true,
+    },
     rating: {
       type: Number,
-      default: 0,
       min: 0,
       max: 5,
+      default: 0,
     },
     reviews: {
       type: Number,
+      min: 0,
       default: 0,
     },
     students: {
       type: Number,
+      min: 0,
       default: 0,
     },
     durationHours: {
       type: Number,
-      required: true,
+      min: 0,
+      default: 0,
     },
     lessons: {
       type: Number,
+      min: 0,
       default: 0,
     },
     price: {
       type: Number,
-      required: true,
+      min: 0,
+      default: 0,
+    },
+    originalPrice: {
+      type: Number,
       min: 0,
     },
-    originalPrice: Number,
-    thumbnail: String,
+    thumbnail: {
+      type: String,
+      trim: true,
+    },
     level: {
       type: String,
       enum: ["Beginner", "Intermediate", "Advanced"],
@@ -49,15 +63,23 @@ const courseSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      required: true,
+      trim: true,
     },
     bestseller: {
       type: Boolean,
       default: false,
     },
-    description: String,
+    description: {
+      type: String,
+      trim: true,
+    },
+    status: {
+      type: String,
+      enum: ["draft", "published", "archived"],
+      default: "published",
+    },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Course", courseSchema);
