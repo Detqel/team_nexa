@@ -12,7 +12,7 @@ import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter,
 } from "../components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -35,6 +35,12 @@ const submissions = [
   { id: 2, assignmentId: 1, student: "Bob Smith", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=bob", submittedAt: "5 hours ago", score: 88, status: "graded", preview: "landing-page.zip" },
   { id: 3, assignmentId: 1, student: "Emma Davis", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma", submittedAt: "1 day ago", score: 95, status: "graded", preview: "project.zip" },
   { id: 4, assignmentId: 1, student: "Frank Miller", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=frank", submittedAt: "Just now", score: null, status: "pending", preview: "homework.zip" },
+  { id: 5, assignmentId: 2, student: "Grace Lee", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=grace", submittedAt: "1 hour ago", score: null, status: "pending", preview: "todo-app.zip" },
+  { id: 6, assignmentId: 2, student: "Henry Park", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=henry", submittedAt: "3 hours ago", score: 91, status: "graded", preview: "react-todo.zip" },
+  { id: 7, assignmentId: 2, student: "Isla Wright", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=isla", submittedAt: "Yesterday", score: 76, status: "graded", preview: "submission.zip" },
+  { id: 8, assignmentId: 3, student: "Jack Nguyen", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jack", submittedAt: "2 days ago", score: 45, status: "graded", preview: "quiz-answers.pdf" },
+  { id: 9, assignmentId: 3, student: "Karen Diaz", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=karen", submittedAt: "2 days ago", score: 48, status: "graded", preview: "quiz-answers.pdf" },
+  { id: 10, assignmentId: 4, student: "Liam Chen", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=liam", submittedAt: "6 hours ago", score: null, status: "pending", preview: "final-project.zip" },
 ];
 
 export function AssignmentsPage() {
@@ -42,6 +48,8 @@ export function AssignmentsPage() {
   const [search, setSearch] = useState("");
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [gradesOpen, setGradesOpen] = useState(false);
+  // New state for preview modal of submissions
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const filtered = assignments.filter((a) =>
     a.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -50,8 +58,8 @@ export function AssignmentsPage() {
 
   const statusColor = (s) =>
     s === "active" ? "bg-green-500 text-white" :
-    s === "completed" ? "bg-blue-500 text-white" :
-    "bg-yellow-500 text-white";
+      s === "completed" ? "bg-blue-500 text-white" :
+        "bg-yellow-500 text-white";
 
   return (
     <InstructorLayout>
@@ -79,7 +87,7 @@ export function AssignmentsPage() {
                   <Select>
                     <SelectTrigger><SelectValue placeholder="Select course" /></SelectTrigger>
                     <SelectContent>
-                      {["Complete Web Development Bootcamp","Advanced React & TypeScript","JavaScript Essentials"].map(c => (
+                      {["Complete Web Development Bootcamp", "Advanced React & TypeScript", "JavaScript Essentials"].map(c => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
                       ))}
                     </SelectContent>
@@ -104,6 +112,38 @@ export function AssignmentsPage() {
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                 <Button onClick={() => setOpen(false)}>Create Assignment</Button>
               </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          {/* Preview Submissions Modal */}
+          <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Submissions for {selectedAssignment?.title}</DialogTitle>
+                <DialogDescription>Review submissions for this assignment</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4">
+                {selectedAssignment && submissions.filter((s) => s.assignmentId === selectedAssignment.id).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-6">No submissions yet for this assignment.</p>
+                )}
+                {selectedAssignment && submissions
+                  .filter((s) => s.assignmentId === selectedAssignment.id)
+                  .slice(0, 5)
+                  .map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center gap-2 p-2 border rounded hover:bg-muted/20"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={s.avatar} />
+                        <AvatarFallback>{s.student[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-medium">{s.student}</p>
+                        <p className="text-sm text-muted-foreground">{s.submittedAt}</p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </DialogContent>
           </Dialog>
         </div>
@@ -179,7 +219,7 @@ export function AssignmentsPage() {
                       <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                         <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all" style={{ width: `${(a.submissions / a.total) * 100}%` }} />
                       </div>
-                      <Button variant="outline" size="sm" className="w-full" onClick={() => { setSelectedAssignment(a); setGradesOpen(true); }}>
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => { setSelectedAssignment(a); setPreviewOpen(true); }}>
                         <Eye className="h-3.5 w-3.5 mr-2" />View Submissions
                       </Button>
                     </CardContent>

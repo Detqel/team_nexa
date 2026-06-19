@@ -54,12 +54,14 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="relative">
+          <Link to="/" className="flex items-center gap-3 group flex-shrink-0 min-w-fit mr-12"
+          >
+            <div className="relative flex items-center justify-center w-10 h-10">
               <GraduationCap className="h-8 w-8 text-primary transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" />
               <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+
+            <span className="text-xl font-bold whitespace-nowrap bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               NexaLearn
             </span>
           </Link>
