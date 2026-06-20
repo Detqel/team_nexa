@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-
 const courseSchema = new mongoose.Schema(
   {
     title: {
@@ -10,7 +9,7 @@ const courseSchema = new mongoose.Schema(
     },
     instructor: {
       type: String,
-      required: true,
+      required: [true, "Instructor name is required"],
       trim: true,
     },
     avatar: {
@@ -19,32 +18,38 @@ const courseSchema = new mongoose.Schema(
     },
     rating: {
       type: Number,
-      default: 0,
       min: 0,
       max: 5,
+      default: 0,
     },
     reviews: {
       type: Number,
+      min: 0,
       default: 0,
     },
     students: {
       type: Number,
+      min: 0,
       default: 0,
     },
     durationHours: {
       type: Number,
+      min: 0,
       default: 0,
     },
     lessons: {
       type: Number,
+      min: 0,
       default: 0,
     },
     price: {
       type: Number,
+      min: 0,
       default: 0,
     },
     originalPrice: {
       type: Number,
+      min: 0,
     },
     thumbnail: {
       type: String,
@@ -76,5 +81,4 @@ const courseSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 module.exports = mongoose.model("Course", courseSchema);
