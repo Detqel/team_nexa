@@ -4,6 +4,15 @@ const fs = require("fs");
 const path = require("path");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const {
+  AVATAR_UPLOADS_PATH,
+  AVATAR_TOO_LARGE_MESSAGE,
+  INVALID_IMAGE_FORMAT_MESSAGE,
+  MAX_BASE64_AVATAR_LENGTH,
+  isDataImageUrl,
+  isRemoteOrUploadUrl,
+  isStoredUploadAvatar,
+} = require("../constants/avatarConstants");
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -139,14 +148,16 @@ const updateProfileValidators = [
     .custom((value) => {
       if (value === null || value === "") return true;
       if (typeof value !== "string") throw new Error("Avatar must be a string.");
-      if (value.startsWith("data:image/")) {
-        if (value.length > 3_000_000) throw new Error("Image is too large. Please use a smaller photo.");
+      if (isDataImageUrl(value)) {
+        if (value.length > MAX_BASE64_AVATAR_LENGTH) {
+          throw new Error(AVATAR_TOO_LARGE_MESSAGE);
+        }
         return true;
       }
-      if (value.startsWith("/uploads/") || value.startsWith("http://") || value.startsWith("https://")) {
+      if (isRemoteOrUploadUrl(value)) {
         return true;
       }
-      throw new Error("Invalid image format.");
+      throw new Error(INVALID_IMAGE_FORMAT_MESSAGE);
     }),
 ];
 
@@ -154,14 +165,14 @@ const applyAvatarUpdate = (user, avatar) => {
   if (avatar === undefined) return;
 
   if (avatar === null || avatar === "") {
-    if (user.avatar?.startsWith("/uploads/")) {
+    if (isStoredUploadAvatar(user.avatar)) {
       removeAvatarFile(user.avatar);
     }
     user.avatar = undefined;
     return;
   }
 
-  if (user.avatar?.startsWith("/uploads/") && avatar !== user.avatar) {
+  if (isStoredUploadAvatar(user.avatar) && avatar !== user.avatar) {
     removeAvatarFile(user.avatar);
   }
 
@@ -198,7 +209,7 @@ const updateProfile = async (req, res, next) => {
 
 const uploadAvatar = async (req, res, next) => {
   try {
-    if (req.body?.avatar?.startsWith("data:image/")) {
+    if (isDataImageUrl(req.body?.avatar)) {
       applyAvatarUpdate(req.user, req.body.avatar);
       await req.user.save();
       const freshUser = await User.findById(req.user._id);
@@ -214,7 +225,7 @@ const uploadAvatar = async (req, res, next) => {
 
     removeAvatarFile(req.user.avatar);
 
-    req.user.avatar = `/uploads/avatars/${req.file.filename}`;
+    req.user.avatar = `${AVATAR_UPLOADS_PATH}${req.file.filename}`;
     await req.user.save();
 
     const freshUser = await User.findById(req.user._id);
