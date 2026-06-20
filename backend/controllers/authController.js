@@ -140,6 +140,9 @@ module.exports = {
   registerValidators,
   loginValidators,
   updateProfileValidators,
+module.exports = {
+  registerValidators,
+  loginValidators,
   validate,
   register,
   login,

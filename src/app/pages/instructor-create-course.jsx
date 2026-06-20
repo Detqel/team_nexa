@@ -233,7 +233,7 @@ export function CreateCoursePage() {
                     <Select value={form.category} onValueChange={(v) => set("category", v)}>
                       <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                       <SelectContent>
-                        {["Web Development","Mobile Development","Data Science","Design","Marketing","AI & Machine Learning","Backend","DevOps","Cybersecurity"].map(c => (
+                        {["Web Development", "Mobile Development", "Data Science", "Design", "Marketing", "AI & Machine Learning", "Backend", "DevOps", "Cybersecurity"].map(c => (
                           <SelectItem key={c} value={c}>{c}</SelectItem>
                         ))}
                       </SelectContent>
@@ -244,7 +244,7 @@ export function CreateCoursePage() {
                     <Select value={form.level} onValueChange={(v) => set("level", v)}>
                       <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
                       <SelectContent>
-                        {["Beginner","Intermediate","Advanced","All Levels"].map(l => (
+                        {["Beginner", "Intermediate", "Advanced", "All Levels"].map(l => (
                           <SelectItem key={l} value={l}>{l}</SelectItem>
                         ))}
                       </SelectContent>
@@ -255,7 +255,7 @@ export function CreateCoursePage() {
                     <Select value={form.language} onValueChange={(v) => set("language", v)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {["English","Tamil","Hindi","Spanish","French"].map(l => (
+                        {["English", "Tamil", "Hindi", "Spanish", "French"].map(l => (
                           <SelectItem key={l} value={l}>{l}</SelectItem>
                         ))}
                       </SelectContent>
