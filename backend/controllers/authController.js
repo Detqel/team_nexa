@@ -5,6 +5,7 @@ const path = require("path");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const {
+<<<<<<< HEAD
   AVATAR_UPLOADS_PATH,
   AVATAR_TOO_LARGE_MESSAGE,
   INVALID_IMAGE_FORMAT_MESSAGE,
@@ -13,11 +14,22 @@ const {
   isRemoteOrUploadUrl,
   isStoredUploadAvatar,
 } = require("../constants/avatarConstants");
+=======
+  STATUS,
+  VALIDATION_MESSAGES,
+  AUTH_MESSAGES,
+  USER_ROLES,
+  FIELD_CONSTRAINTS,
+  DEFAULTS,
+} = require("../constants/appConstants");
+>>>>>>> 3c0b5f4a2aa236cbffd9623b6ed80bebba37436f
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ message: errors.array()[0].msg, errors: errors.array() });
+    return res
+      .status(STATUS.BAD_REQUEST)
+      .json({ message: errors.array()[0].msg, errors: errors.array() });
   }
   next();
 };
@@ -64,50 +76,52 @@ const removeAvatarFile = (avatarPath) => {
 
 const generateToken = (userId) =>
   jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+    expiresIn: process.env.JWT_EXPIRES_IN || DEFAULTS.JWT_EXPIRES_IN,
   });
 
 const registerValidators = [
-  body("name").trim().notEmpty().withMessage("Name is required").isLength({ max: 100 }),
-  body("email").trim().isEmail().withMessage("Please provide a valid email"),
+  body("name")
+    .trim()
+    .notEmpty()
+    .withMessage(VALIDATION_MESSAGES.NAME_REQUIRED)
+    .isLength({ max: FIELD_CONSTRAINTS.NAME_MAX_LENGTH }),
+  body("email").trim().isEmail().withMessage(VALIDATION_MESSAGES.EMAIL_INVALID),
   body("password")
-    .isLength({ min: 8 })
-    .withMessage("Password must be at least 8 characters")
+    .isLength({ min: FIELD_CONSTRAINTS.PASSWORD_MIN_LENGTH })
+    .withMessage(VALIDATION_MESSAGES.PASSWORD_MIN_LENGTH)
     .matches(/[a-z]/)
-    .withMessage("Password must contain a lowercase letter")
+    .withMessage(VALIDATION_MESSAGES.PASSWORD_LOWERCASE)
     .matches(/[A-Z]/)
-    .withMessage("Password must contain an uppercase letter")
+    .withMessage(VALIDATION_MESSAGES.PASSWORD_UPPERCASE)
     .matches(/[0-9]/)
-    .withMessage("Password must contain a number"),
-  body("role").optional().isIn(["student", "instructor"]).withMessage("Invalid role"),
+    .withMessage(VALIDATION_MESSAGES.PASSWORD_NUMBER),
+  body("role")
+    .optional()
+    .isIn([USER_ROLES.STUDENT, USER_ROLES.INSTRUCTOR])
+    .withMessage(VALIDATION_MESSAGES.ROLE_INVALID),
 ];
 
 const loginValidators = [
-  body("email").trim().isEmail().withMessage("Please provide a valid email"),
-  body("password").notEmpty().withMessage("Password is required"),
+  body("email").trim().isEmail().withMessage(VALIDATION_MESSAGES.EMAIL_INVALID),
+  body("password").notEmpty().withMessage(VALIDATION_MESSAGES.PASSWORD_REQUIRED),
 ];
 
 const register = async (req, res, next) => {
   try {
-    const { name, email, password, role = "student" } = req.body;
+    const { name, email, password, role = DEFAULTS.ROLE } = req.body;
 
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
-      return res.status(409).json({ message: "An account with this email already exists." });
+      return res.status(STATUS.CONFLICT).json({ message: AUTH_MESSAGES.EMAIL_EXISTS });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role,
-    });
+    const hashedPassword = await bcrypt.hash(password, FIELD_CONSTRAINTS.BCRYPT_SALT_ROUNDS);
+    const user = await User.create({ name, email, password: hashedPassword, role });
 
     const token = generateToken(user._id);
 
-    res.status(201).json({
-      message: "Registration successful",
+    res.status(STATUS.CREATED).json({
+      message: AUTH_MESSAGES.REGISTRATION_SUCCESS,
       token,
       user: formatUser(user),
     });
@@ -122,13 +136,13 @@ const login = async (req, res, next) => {
 
     const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: "Invalid email or password." });
+      return res.status(STATUS.UNAUTHORIZED).json({ message: AUTH_MESSAGES.LOGIN_INVALID });
     }
 
     const token = generateToken(user._id);
 
-    res.json({
-      message: "Login successful",
+    res.status(STATUS.OK).json({
+      message: AUTH_MESSAGES.LOGIN_SUCCESS,
       token,
       user: formatUser(user),
     });
@@ -138,7 +152,30 @@ const login = async (req, res, next) => {
 };
 
 const getMe = async (req, res) => {
-  res.json({ user: formatUser(req.user) });
+  res.status(STATUS.OK).json({ user: formatUser(req.user) });
+};
+
+const updateProfileValidators = [
+  body("name").optional().trim().notEmpty().withMessage("Name cannot be empty").isLength({ max: 100 }),
+];
+
+const updateProfile = async (req, res, next) => {
+  try {
+    const { name } = req.body;
+
+    if (name !== undefined) {
+      req.user.name = name.trim();
+    }
+
+    await req.user.save();
+
+    res.json({
+      message: "Profile updated successfully.",
+      user: formatUser(req.user),
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 const updateProfileValidators = [

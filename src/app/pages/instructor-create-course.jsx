@@ -28,11 +28,11 @@ import { toast } from "sonner";
 const PUBLISHED_COURSES_KEY = "nexa_published_courses";
 
 const steps = [
-  { id: 1, label: "Basic Info", icon: FileText },
-  { id: 2, label: "Curriculum", icon: BookOpen },
-  { id: 3, label: "Media", icon: Image },
-  { id: 4, label: "Pricing", icon: DollarSign },
-  { id: 5, label: "Publish", icon: Globe },
+  { id: 1, label: "Basic Info",  icon: FileText   },
+  { id: 2, label: "Curriculum", icon: BookOpen   },
+  { id: 3, label: "Media",      icon: Image       },
+  { id: 4, label: "Pricing",    icon: DollarSign  },
+  { id: 5, label: "Publish",    icon: Globe       },
 ];
 
 export function CreateCoursePage() {
@@ -45,22 +45,45 @@ export function CreateCoursePage() {
     title: "", subtitle: "", description: "", category: "", level: "", language: "English",
     tags: [], tagInput: "",
     sections: [{ id: 1, title: "Introduction", lessons: [{ id: 1, title: "Welcome to the course", type: "video", duration: "" }] }],
-    thumbnail: null, promoVideo: "",
+    thumbnailDataUrl: null,
+    promoVideo: "",
+    videoFile: null,
     price: "", originalPrice: "", isFree: false,
     isPublic: true, isCertificate: true, allowPreview: true,
   });
 
   const set = (key, val) => setForm((p) => ({ ...p, [key]: val }));
 
+  // ── thumbnail upload ─────────────────────────────────────────────────────────
+  // Uses FileReader to produce a data URL — needed both for the live preview
+  // and so the image can be stored in localStorage when the course is published.
+  const handleThumbnailUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setThumbnailPreview(reader.result);
+      set("thumbnailDataUrl", reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // ── video upload ─────────────────────────────────────────────────────────────
+  const handleVideoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) set("videoFile", file);
+  };
+
+  // ── tags ─────────────────────────────────────────────────────────────────────
   const addTag = () => {
     if (form.tagInput.trim() && !form.tags.includes(form.tagInput.trim())) {
       set("tags", [...form.tags, form.tagInput.trim()]);
       set("tagInput", "");
     }
   };
-
   const removeTag = (t) => set("tags", form.tags.filter((x) => x !== t));
 
+  // ── curriculum ───────────────────────────────────────────────────────────────
   const addSection = () =>
     set("sections", [...form.sections, { id: Date.now(), title: "New Section", lessons: [] }]);
 
@@ -76,33 +99,30 @@ export function CreateCoursePage() {
       s.id === sectionId ? { ...s, lessons: s.lessons.filter((l) => l.id !== lessonId) } : s
     ));
 
+  // ── stepper ──────────────────────────────────────────────────────────────────
   const progress = ((step - 1) / (steps.length - 1)) * 100;
 
   const isStepComplete = (s) => {
     if (s === 1) return form.title && form.description && form.category && form.level;
     if (s === 2) return form.sections && form.sections.some((sec) => sec.lessons && sec.lessons.length > 0);
-    if (s === 3) return !!form.thumbnail || !!form.promoVideo;
+    if (s === 3) return !!form.thumbnailDataUrl || !!form.promoVideo;
     if (s === 4) return form.isFree || (!!form.price && Number(form.price) > 0);
     return true;
   };
 
   const attemptStep = (target) => {
-    if (target <= step) {
-      setStep(target);
-      return;
-    }
-    // allow moving forward only if previous step is complete
+    if (target <= step) { setStep(target); return; }
     if (isStepComplete(target - 1)) {
       setStep(target);
     } else {
-      alert('Please complete the previous step before proceeding.');
+      toast.error("Please complete the current step before moving on.");
     }
   };
 
   const handleNextStep = () => {
     if (step >= steps.length) return;
     if (!isStepComplete(step)) {
-      alert('Please complete required fields before moving to the next step.');
+      toast.error("Please fill in all required fields before continuing.");
       return;
     }
     setStep((s) => Math.min(steps.length, s + 1));
@@ -196,7 +216,11 @@ export function CreateCoursePage() {
                   <button
                     onClick={() => attemptStep(s.id)}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
-                      ${step === s.id ? "bg-primary text-primary-foreground" : step > s.id ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-muted text-muted-foreground"}`}
+                      ${step === s.id
+                        ? "bg-primary text-primary-foreground"
+                        : step > s.id
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-muted text-muted-foreground"}`}
                   >
                     {step > s.id ? <CheckCircle2 className="h-4 w-4" /> : <s.icon className="h-4 w-4" />}
                     <span className="hidden sm:inline">{s.label}</span>
@@ -209,11 +233,14 @@ export function CreateCoursePage() {
           </CardContent>
         </Card>
 
-        {/* Step 1 - Basic Info */}
+        {/* ── Step 1 — Basic Info ──────────────────────────────────────────────── */}
         {step === 1 && (
           <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}>
             <Card>
-              <CardHeader><CardTitle>Basic Information</CardTitle><CardDescription>Tell students what your course is about</CardDescription></CardHeader>
+              <CardHeader>
+                <CardTitle>Basic Information</CardTitle>
+                <CardDescription>Tell students what your course is about</CardDescription>
+              </CardHeader>
               <CardContent className="space-y-5">
                 <div className="space-y-2">
                   <Label>Course Title *</Label>
@@ -285,13 +312,16 @@ export function CreateCoursePage() {
           </motion.div>
         )}
 
-        {/* Step 2 - Curriculum */}
+        {/* ── Step 2 — Curriculum ─────────────────────────────────────────────── */}
         {step === 2 && (
           <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}>
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
-                  <div><CardTitle>Curriculum</CardTitle><CardDescription>Organize your course into sections and lessons</CardDescription></div>
+                  <div>
+                    <CardTitle>Curriculum</CardTitle>
+                    <CardDescription>Organize your course into sections and lessons</CardDescription>
+                  </div>
                   <Button variant="outline" onClick={addSection}><Plus className="h-4 w-4 mr-2" />Add Section</Button>
                 </div>
               </CardHeader>
@@ -301,12 +331,12 @@ export function CreateCoursePage() {
                     <CardContent className="pt-4 pb-3 space-y-3">
                       <div className="flex items-center gap-3">
                         <Badge variant="outline" className="flex-shrink-0">Section {si + 1}</Badge>
-                        <Input value={section.title} onChange={(e) =>
-                          set("sections", form.sections.map((s) => s.id === section.id ? { ...s, title: e.target.value } : s))
-                        } className="font-medium" />
+                        <Input value={section.title}
+                          onChange={(e) => set("sections", form.sections.map((s) => s.id === section.id ? { ...s, title: e.target.value } : s))}
+                          className="font-medium" />
                       </div>
                       <div className="pl-4 space-y-2">
-                        {section.lessons.map((lesson, li) => (
+                        {section.lessons.map((lesson) => (
                           <div key={lesson.id} className="flex items-center gap-2 p-2 bg-muted/40 rounded-lg">
                             <Video className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <Input value={lesson.title} placeholder="Lesson title"
@@ -316,8 +346,7 @@ export function CreateCoursePage() {
                             <Select value={lesson.type} onValueChange={(v) =>
                               set("sections", form.sections.map((s) =>
                                 s.id === section.id ? { ...s, lessons: s.lessons.map((l) => l.id === lesson.id ? { ...l, type: v } : l) } : s
-                              ))
-                            }>
+                              ))}>
                               <SelectTrigger className="w-24 h-8 text-xs"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="video">Video</SelectItem>
@@ -346,12 +375,17 @@ export function CreateCoursePage() {
           </motion.div>
         )}
 
-        {/* Step 3 - Media */}
+        {/* ── Step 3 — Media ──────────────────────────────────────────────────── */}
         {step === 3 && (
           <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}>
             <Card>
-              <CardHeader><CardTitle>Course Media</CardTitle><CardDescription>Upload a thumbnail and promotional video</CardDescription></CardHeader>
+              <CardHeader>
+                <CardTitle>Course Media</CardTitle>
+                <CardDescription>Upload a thumbnail and promotional video</CardDescription>
+              </CardHeader>
               <CardContent className="space-y-6">
+
+                {/* Thumbnail upload — hidden input wired to the visible area */}
                 <div className="space-y-2">
                   <Label>Course Thumbnail *</Label>
                   <input
@@ -393,18 +427,39 @@ export function CreateCoursePage() {
                     </Button>
                   </div>
                 </div>
+
                 <Separator />
+
+                {/* Promo video URL */}
                 <div className="space-y-2">
                   <Label>Promotional Video URL</Label>
                   <Input placeholder="https://youtube.com/watch?v=..." value={form.promoVideo} onChange={(e) => set("promoVideo", e.target.value)} />
-                  <p className="text-xs text-muted-foreground">A short 2–3 minute preview that shows up on your course landing page</p>
+                  <p className="text-xs text-muted-foreground">A short 2–3 minute preview shown on your course landing page</p>
                 </div>
+
+                {/* Video file upload */}
                 <div className="space-y-2">
                   <Label>Or Upload a Video File</Label>
                   <div className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/30 transition-colors">
                     <Video className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">MP4, MOV up to 500MB</p>
-                    <Button variant="outline" size="sm" className="mt-2"><Upload className="h-4 w-4 mr-2" />Upload Video</Button>
+                    <input
+                      type="file"
+                      accept="video/mp4,video/mov,video/avi"
+                      id="video-upload"
+                      className="hidden"
+                      onChange={handleVideoUpload}
+                    />
+                    <label htmlFor="video-upload">
+                      <Button variant="outline" size="sm" className="mt-2" type="button" asChild>
+                        <span><Upload className="h-4 w-4 mr-2" />Upload Video</span>
+                      </Button>
+                    </label>
+                    {form.videoFile && (
+                      <p className="mt-2 text-sm text-green-600 flex items-center justify-center gap-1">
+                        <CheckCircle2 className="h-4 w-4" /> {form.videoFile.name}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -412,11 +467,14 @@ export function CreateCoursePage() {
           </motion.div>
         )}
 
-        {/* Step 4 - Pricing */}
+        {/* ── Step 4 — Pricing ────────────────────────────────────────────────── */}
         {step === 4 && (
           <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}>
             <Card>
-              <CardHeader><CardTitle>Pricing</CardTitle><CardDescription>Set your course price and discount</CardDescription></CardHeader>
+              <CardHeader>
+                <CardTitle>Pricing</CardTitle>
+                <CardDescription>Set your course price and discount</CardDescription>
+              </CardHeader>
               <CardContent className="space-y-5">
                 <div className="flex items-center gap-3 p-4 bg-muted/40 rounded-xl">
                   <Switch checked={form.isFree} onCheckedChange={(v) => set("isFree", v)} />
@@ -450,9 +508,9 @@ export function CreateCoursePage() {
                 <div className="space-y-4">
                   <h3 className="font-semibold">Access Settings</h3>
                   {[
-                    { key: "isPublic", label: "Public Course", desc: "Anyone can find and enroll", icon: Globe },
-                    { key: "isCertificate", label: "Certificate of Completion", desc: "Award a certificate when students finish", icon: CheckCircle2 },
-                    { key: "allowPreview", label: "Allow Free Preview", desc: "Let non-enrolled students preview first lessons", icon: Lock },
+                    { key: "isPublic",      label: "Public Course",             desc: "Anyone can find and enrol",                           icon: Globe         },
+                    { key: "isCertificate", label: "Certificate of Completion", desc: "Award a certificate when students finish",            icon: CheckCircle2  },
+                    { key: "allowPreview",  label: "Allow Free Preview",        desc: "Let non-enrolled students preview the first lessons", icon: Lock          },
                   ].map(({ key, label, desc, icon: Icon }) => (
                     <div key={key} className="flex items-center justify-between p-4 border rounded-xl">
                       <div className="flex items-center gap-3">
@@ -471,28 +529,42 @@ export function CreateCoursePage() {
           </motion.div>
         )}
 
-        {/* Step 5 - Publish */}
+        {/* ── Step 5 — Publish ────────────────────────────────────────────────── */}
         {step === 5 && (
           <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}>
             <Card>
-              <CardHeader><CardTitle>Ready to Publish?</CardTitle><CardDescription>Review your course details before going live</CardDescription></CardHeader>
+              <CardHeader>
+                <CardTitle>Ready to Publish?</CardTitle>
+                <CardDescription>Review your course details before going live</CardDescription>
+              </CardHeader>
               <CardContent className="space-y-4">
+                {/* Thumbnail preview on review screen */}
+                {thumbnailPreview && (
+                  <div className="rounded-xl overflow-hidden border">
+                    <img src={thumbnailPreview} alt="Course thumbnail" className="w-full h-40 object-cover" />
+                  </div>
+                )}
+
                 {[
-                  { label: "Course Title", value: form.title || "—", ok: !!form.title },
-                  { label: "Description", value: form.description ? `${form.description.slice(0, 60)}...` : "—", ok: !!form.description },
-                  { label: "Category", value: form.category || "—", ok: !!form.category },
-                  { label: "Level", value: form.level || "—", ok: !!form.level },
-                  { label: "Price", value: form.isFree ? "Free" : form.price ? `$${form.price}` : "—", ok: form.isFree || !!form.price },
-                  { label: "Curriculum", value: `${form.sections.length} sections, ${form.sections.reduce((a, s) => a + s.lessons.length, 0)} lessons`, ok: form.sections.some(s => s.lessons.length > 0) },
+                  { label: "Course Title",  value: form.title || "—",                                                                           ok: !!form.title       },
+                  { label: "Description",   value: form.description ? `${form.description.slice(0, 60)}…` : "—",                                ok: !!form.description },
+                  { label: "Category",      value: form.category || "—",                                                                         ok: !!form.category    },
+                  { label: "Level",         value: form.level || "—",                                                                            ok: !!form.level       },
+                  { label: "Thumbnail",     value: thumbnailPreview ? "Uploaded ✓" : form.promoVideo ? "Promo video set ✓" : "—",               ok: !!thumbnailPreview || !!form.promoVideo },
+                  { label: "Price",         value: form.isFree ? "Free" : form.price ? `$${form.price}` : "—",                                   ok: form.isFree || !!form.price },
+                  { label: "Curriculum",    value: `${form.sections.length} sections · ${form.sections.reduce((a, s) => a + s.lessons.length, 0)} lessons`, ok: form.sections.some((s) => s.lessons.length > 0) },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between p-3 border rounded-lg">
                     <span className="text-sm text-muted-foreground">{item.label}</span>
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{item.value}</span>
-                      {item.ok ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-yellow-500" />}
+                      {item.ok
+                        ? <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        : <AlertCircle  className="h-4 w-4 text-yellow-500" />}
                     </div>
                   </div>
                 ))}
+
                 <div className="flex gap-3 pt-2">
                   <Button variant="outline" className="flex-1">Save as Draft</Button>
                   <Button
@@ -513,8 +585,12 @@ export function CreateCoursePage() {
           <Button variant="outline" onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1}>
             <ChevronLeft className="h-4 w-4 mr-2" /> Previous
           </Button>
-          <Button onClick={handleNextStep} disabled={step === steps.length || !isStepComplete(step)} className="bg-gradient-to-r from-indigo-500 to-purple-600">
-            {step === steps.length ? "Finish" : "Next"} <ChevronRight className="h-4 w-4 ml-2" />
+          <Button
+            onClick={handleNextStep}
+            disabled={step === steps.length || !isStepComplete(step)}
+            className="bg-gradient-to-r from-indigo-500 to-purple-600"
+          >
+            Next <ChevronRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
       </div>
