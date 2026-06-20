@@ -67,17 +67,13 @@ const loginValidators = [
 const register = async (req, res, next) => {
   try {
     const { name, email, password, role = DEFAULTS.ROLE } = req.body;
-
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
       return res.status(STATUS.CONFLICT).json({ message: AUTH_MESSAGES.EMAIL_EXISTS });
     }
-
     const hashedPassword = await bcrypt.hash(password, FIELD_CONSTRAINTS.BCRYPT_SALT_ROUNDS);
     const user = await User.create({ name, email, password: hashedPassword, role });
-
     const token = generateToken(user._id);
-
     res.status(STATUS.CREATED).json({
       message: AUTH_MESSAGES.REGISTRATION_SUCCESS,
       token,
@@ -91,14 +87,11 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-
     const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(STATUS.UNAUTHORIZED).json({ message: AUTH_MESSAGES.LOGIN_INVALID });
     }
-
     const token = generateToken(user._id);
-
     res.status(STATUS.OK).json({
       message: AUTH_MESSAGES.LOGIN_SUCCESS,
       token,
@@ -120,13 +113,10 @@ const updateProfileValidators = [
 const updateProfile = async (req, res, next) => {
   try {
     const { name } = req.body;
-
     if (name !== undefined) {
       req.user.name = name.trim();
     }
-
     await req.user.save();
-
     res.json({
       message: "Profile updated successfully.",
       user: formatUser(req.user),
@@ -140,9 +130,6 @@ module.exports = {
   registerValidators,
   loginValidators,
   updateProfileValidators,
-module.exports = {
-  registerValidators,
-  loginValidators,
   validate,
   register,
   login,
