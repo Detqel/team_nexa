@@ -14,6 +14,7 @@ import {
   GraduationCap,
   Home,
   ChevronLeft,
+  User,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -42,6 +43,7 @@ const menuItems = [
   { icon: DollarSign,      label: "Earnings",        href: "/instructor-dashboard/earnings" },
   { icon: FileText,        label: "Assignments",     href: "/instructor-dashboard/assignments" },
   { icon: Trophy,          label: "Quiz Management", href: "/instructor-dashboard/quiz" },
+  { icon: User,            label: "Profile",         href: "/instructor-dashboard/profile" },
   { icon: Settings,        label: "Settings",        href: "/instructor-dashboard/settings" },
 ];
 

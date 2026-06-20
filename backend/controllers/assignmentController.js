@@ -1,14 +1,16 @@
 const Assignment = require("../models/Assignment");
 const AssignmentSubmission = require("../models/AssignmentSubmission");
 const Course = require("../models/Course");
+const User = require("../models/User");
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const formatAssignment = (a, submissionCount = 0, totalEnrolled = 0) => ({
+const formatAssignment = (a, submissionCount = 0, totalEnrolled = 0, mySubmission = null) => ({
   id: a._id.toString(),
   title: a.title,
   description: a.description,
-  course: a.course,
+  course: a.course?._id ? a.course._id.toString() : a.course,
+  courseTitle: a.course?.title || null,
   instructor: a.instructor,
   dueDate: a.dueDate,
   maxScore: a.maxScore,
@@ -18,14 +20,28 @@ const formatAssignment = (a, submissionCount = 0, totalEnrolled = 0) => ({
   attachments: a.attachments || [],
   submissions: submissionCount,
   total: totalEnrolled,
+  mySubmission,
   createdAt: a.createdAt,
   updatedAt: a.updatedAt,
 });
 
-const formatSubmission = (s) => ({
+const formatStudent = (student) => {
+  if (!student) return null;
+  if (student._id) {
+    return {
+      id: student._id.toString(),
+      name: student.name,
+      email: student.email,
+      avatar: student.avatar || null,
+    };
+  }
+  return student;
+};
+
+const formatSubmission = (s, maxScore = null) => ({
   id: s._id.toString(),
-  assignment: s.assignment,
-  student: s.student,
+  assignment: s.assignment?._id ? s.assignment._id.toString() : s.assignment,
+  student: formatStudent(s.student),
   submittedAt: s.submittedAt,
   content: s.content,
   fileUrl: s.fileUrl,
@@ -36,6 +52,7 @@ const formatSubmission = (s) => ({
   isLate: s.isLate,
   gradedAt: s.gradedAt,
   gradedBy: s.gradedBy,
+  maxScore,
 });
 
 // ─── Assignment CRUD ─────────────────────────────────────────────────────────
@@ -58,20 +75,47 @@ const getAssignments = async (req, res, next) => {
       filter.status = { $in: ["active", "completed"] };
     }
 
-    if (courseId) filter.course = courseId;
+    if (courseId) {
+      if (req.user.role === "instructor") {
+        filter.course = courseId;
+      } else {
+        const enrolledIds = (req.user.enrolledCourses || []).map((id) => id.toString());
+        if (!enrolledIds.includes(courseId)) {
+          return res.json({ count: 0, assignments: [] });
+        }
+        filter.course = courseId;
+      }
+    }
     if (status && req.user.role === "instructor") filter.status = status;
 
     const assignments = await Assignment.find(filter)
       .populate("course", "title")
       .sort({ createdAt: -1 });
 
-    // Attach submission counts for instructor view
     const results = await Promise.all(
       assignments.map(async (a) => {
-        const submissionCount = await AssignmentSubmission.countDocuments({
+        if (req.user.role === "instructor") {
+          const submissionCount = await AssignmentSubmission.countDocuments({
+            assignment: a._id,
+          });
+          const courseId = a.course?._id || a.course;
+          const totalEnrolled = await User.countDocuments({
+            enrolledCourses: courseId,
+            role: "student",
+          });
+          return formatAssignment(a, submissionCount, totalEnrolled);
+        }
+
+        const mySubmission = await AssignmentSubmission.findOne({
           assignment: a._id,
+          student: req.user._id,
         });
-        return formatAssignment(a, submissionCount);
+        return formatAssignment(
+          a,
+          0,
+          0,
+          mySubmission ? formatSubmission(mySubmission) : null,
+        );
       })
     );
 
@@ -93,10 +137,41 @@ const getAssignmentById = async (req, res, next) => {
     if (!assignment) {
       return res.status(404).json({ message: "Assignment not found." });
     }
+
+    if (req.user.role === "student") {
+      const courseId = assignment.course._id?.toString() || assignment.course.toString();
+      const isEnrolled = (req.user.enrolledCourses || []).some(
+        (id) => id.toString() === courseId,
+      );
+      if (!isEnrolled) {
+        return res.status(403).json({ message: "You are not enrolled in this course." });
+      }
+      if (!["active", "completed"].includes(assignment.status)) {
+        return res.status(403).json({ message: "This assignment is not available." });
+      }
+    } else if (
+      req.user.role === "instructor" &&
+      assignment.instructor.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ message: "Access denied." });
+    }
+
     const submissionCount = await AssignmentSubmission.countDocuments({
       assignment: assignment._id,
     });
-    res.json({ assignment: formatAssignment(assignment, submissionCount) });
+
+    let mySubmission = null;
+    if (req.user.role === "student") {
+      const submission = await AssignmentSubmission.findOne({
+        assignment: assignment._id,
+        student: req.user._id,
+      });
+      mySubmission = submission ? formatSubmission(submission) : null;
+    }
+
+    res.json({
+      assignment: formatAssignment(assignment, submissionCount, 0, mySubmission),
+    });
   } catch (error) {
     next(error);
   }
@@ -245,6 +320,12 @@ const getSubmissions = async (req, res, next) => {
       return res.status(404).json({ message: "Assignment not found." });
     }
 
+    if (req.user.role === "instructor") {
+      if (assignment.instructor.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ message: "Access denied." });
+      }
+    }
+
     const filter = { assignment: req.params.id };
     if (req.user.role === "student") {
       filter.student = req.user._id;
@@ -256,7 +337,9 @@ const getSubmissions = async (req, res, next) => {
 
     res.json({
       count: submissions.length,
-      submissions: submissions.map(formatSubmission),
+      submissions: submissions.map((s) =>
+        formatSubmission(s, assignment.maxScore),
+      ),
     });
   } catch (error) {
     next(error);
@@ -326,7 +409,7 @@ const submitAssignment = async (req, res, next) => {
 
     res.status(201).json({
       message: "Assignment submitted successfully.",
-      submission: formatSubmission(submission),
+      submission: formatSubmission(submission, assignment.maxScore),
     });
   } catch (error) {
     next(error);
@@ -384,7 +467,7 @@ const gradeSubmission = async (req, res, next) => {
 
     res.json({
       message: "Submission graded successfully.",
-      submission: formatSubmission(submission),
+      submission: formatSubmission(submission, assignment.maxScore),
     });
   } catch (error) {
     next(error);

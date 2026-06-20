@@ -34,32 +34,14 @@ import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
 import { coursesApi } from "../lib/api";
 import { getUser, updateStoredUser } from "../lib/auth";
+import { getUserAvatarUrl } from "../lib/avatar";
+import { getCourseThumbnailUrl } from "../lib/images";
 import { toast } from "sonner";
-
-const PRICE_FILTERS = [
-  { id: "all", label: "All Prices", min: null, max: null },
-  { id: "free", label: "Free", min: 0, max: 0 },
-  { id: "under50", label: "Under $50", min: 0.01, max: 49.99 },
-  { id: "50-100", label: "$50 - $100", min: 50, max: 100 },
-  { id: "over100", label: "Over $100", min: 100.01, max: null },
-];
-
-const DURATION_FILTERS = [
-  { id: "all", label: "Any Duration", min: null, max: null },
-  { id: "short", label: "Under 20 hours", min: 0, max: 20 },
-  { id: "medium", label: "20 - 35 hours", min: 20, max: 35 },
-  { id: "long", label: "Over 35 hours", min: 35, max: null },
-];
-
-function formatPrice(price) {
-  if (price === 0) return "Free";
-  return `$${Number(price).toFixed(2)}`;
-}
 
 // ── shared localStorage keys — must match WishlistPage & CreateCoursePage ────
 const WISHLIST_KEY          = "nexa_wishlist_ids";
 const WISHLIST_COURSES_KEY  = "nexa_wishlist_courses";
-const PUBLISHED_COURSES_KEY = "nexa_published_courses";   // ← new
+const PUBLISHED_COURSES_KEY = "nexa_published_courses";
 
 // ── localStorage helpers ─────────────────────────────────────────────────────
 function getStoredWishlistIds() {
@@ -122,13 +104,22 @@ function formatPrice(price) {
   return `$${Number(price).toFixed(2)}`;
 }
 
+// Pull a numeric "hours" value out of a duration string like "12h total"
+// so locally-published courses can be matched against the Duration filter.
+function parseDurationHours(course) {
+  if (typeof course.durationHours === "number") return course.durationHours;
+  const match = /([\d.]+)\s*h/i.exec(course.duration || "");
+  return match ? parseFloat(match[1]) : null;
+}
+
 // ── apply the same active filters to a list of courses client-side ───────────
 // Used for localStorage courses that never pass through the backend API.
 function applyFiltersLocally(courses, {
   search, selectedCategories, selectedLevels,
-  selectedPrice, selectedRating,
+  selectedPrice, selectedRating, selectedDuration,
 }) {
-  const priceFilter = PRICE_FILTERS.find((p) => p.id === selectedPrice);
+  const priceFilter    = PRICE_FILTERS.find((p) => p.id === selectedPrice);
+  const durationFilter = DURATION_FILTERS.find((d) => d.id === selectedDuration);
 
   return courses.filter((c) => {
     // text search
@@ -148,6 +139,13 @@ function applyFiltersLocally(courses, {
     // price
     if (priceFilter?.min != null && c.price < priceFilter.min) return false;
     if (priceFilter?.max != null && c.price > priceFilter.max) return false;
+    // duration
+    if (durationFilter?.min != null || durationFilter?.max != null) {
+      const hours = parseDurationHours(c);
+      if (hours == null) return false;
+      if (durationFilter.min != null && hours < durationFilter.min) return false;
+      if (durationFilter.max != null && hours > durationFilter.max) return false;
+    }
     return true;
   });
 }
@@ -172,19 +170,6 @@ export function CoursesPage() {
   const navigate = useNavigate();
 
   // ── debounce search ─────────────────────────────────────────────────────────
-  const [selectedLevels, setSelectedLevels] = useState([]);
-  const [selectedPrice, setSelectedPrice] = useState("all");
-  const [selectedRating, setSelectedRating] = useState(null);
-  const [selectedDuration, setSelectedDuration] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [sortOption, setSortOption] = useState("title-asc");
-  const [courses, setCourses] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [userState, setUserState] = useState(getUser());
-  const navigate = useNavigate();
-
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
@@ -196,18 +181,6 @@ export function CoursesPage() {
       .getCategories()
       .then((data) => setCategories(data.categories || []))
       .catch(() => {});
-  }, []);
-
-  // ── sync wishlist + published courses from other tabs / pages ───────────────
-  useEffect(() => {
-    const onStorage = (e) => {
-      if (e.key === WISHLIST_KEY)          setWishlistedIds(getStoredWishlistIds());
-      // A new course was published — trigger a re-fetch so it shows up
-      if (e.key === PUBLISHED_COURSES_KEY) fetchCourses();
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── fetch courses (API + localStorage merge) ────────────────────────────────
@@ -241,12 +214,14 @@ export function CoursesPage() {
         .filter((c) => !apiIds.has(c.id));
 
       // 4️⃣  Apply the active filters client-side to local courses
+      //     (API already filtered apiCourses server-side)
       const filteredLocal = applyFiltersLocally(localPublished, {
         search:             debouncedSearch.trim(),
         selectedCategories,
         selectedLevels,
         selectedPrice,
         selectedRating,
+        selectedDuration,
       });
 
       // 5️⃣  Newest published courses appear at the top
@@ -256,45 +231,6 @@ export function CoursesPage() {
       setCourses([]);
     } finally {
       setLoading(false);
-    coursesApi.getCategories().then((data) => setCategories(data.categories || [])).catch(() => { });
-  }, []);
-
-  const fetchCourses = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = { sort: sortOption };
-      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
-      if (selectedCategories.length > 0) params.category = selectedCategories.join(",");
-      if (selectedLevels.length > 0) params.level = selectedLevels.join(",");
-      if (selectedRating) params.rating = selectedRating;
-
-      const priceFilter = PRICE_FILTERS.find((p) => p.id === selectedPrice);
-      if (priceFilter?.min != null) params.priceMin = priceFilter.min;
-      if (priceFilter?.max != null) params.priceMax = priceFilter.max;
-
-      const durationFilter = DURATION_FILTERS.find((d) => d.id === selectedDuration);
-      if (durationFilter?.min != null) params.durationMin = durationFilter.min;
-      if (durationFilter?.max != null) params.durationMax = durationFilter.max;
-
-      const data = await coursesApi.getAll(params);
-      setCourses(data.courses || []);
-    } catch {
-      toast.error("Failed to load courses. Please try again.");
-      setCourses([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearch, selectedCategories, selectedLevels, selectedPrice, selectedRating, selectedDuration, sortOption]);
-
-  useEffect(() => {
-    fetchCourses();
-  }, [fetchCourses]);
-
-  async function handleEnroll(courseId) {
-    const user = getUser();
-    if (!user) {
-      navigate(`/login?redirect=${encodeURIComponent("/courses")}`);
-      return;
     }
   }, [
     debouncedSearch, selectedCategories, selectedLevels,
@@ -302,6 +238,17 @@ export function CoursesPage() {
   ]);
 
   useEffect(() => { fetchCourses(); }, [fetchCourses]);
+
+  // ── sync wishlist + published courses from other tabs / pages ───────────────
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === WISHLIST_KEY)          setWishlistedIds(getStoredWishlistIds());
+      // A new course was published — trigger a re-fetch so it shows up
+      if (e.key === PUBLISHED_COURSES_KEY) fetchCourses();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [fetchCourses]);
 
   // ── enroll ──────────────────────────────────────────────────────────────────
   async function handleEnroll(courseId) {
@@ -314,18 +261,12 @@ export function CoursesPage() {
       toast.info("You are already enrolled in this course.");
       return;
     }
-    if (user.enrolledCourses?.includes(courseId)) {
-      toast.info("You are already enrolled in this course.");
-      return;
-    }
-
     try {
       const data = await coursesApi.enroll(courseId);
       const updatedUser = {
         ...user,
         enrolledCourses: data.enrolledCourses,
         courseProgress:  data.courseProgress,
-        courseProgress: data.courseProgress,
       };
       updateStoredUser(updatedUser);
       setUserState(updatedUser);
@@ -377,16 +318,12 @@ export function CoursesPage() {
   function toggleCategory(category) {
     setSelectedCategories((prev) =>
       prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
-  function toggleCategory(category) {
-    setSelectedCategories((prev) =>
-      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category],
     );
   }
 
   function toggleLevel(level) {
     setSelectedLevels((prev) =>
       prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level]
-      prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level],
     );
   }
 
@@ -433,9 +370,6 @@ export function CoursesPage() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
 
             {/* ── Sidebar filters ── */}
-      <section className="py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <aside className="lg:col-span-1">
               <Card className="sticky top-20">
                 <CardHeader>
@@ -516,27 +450,10 @@ export function CoursesPage() {
                             checked={selectedRating === rating}
                             onCheckedChange={() => setSelectedRating(selectedRating === rating ? null : rating)}
                           />
-                          <Checkbox checked={selectedRating === rating} onCheckedChange={() => setSelectedRating(selectedRating === rating ? null : rating)} />
                           <span className="text-sm font-medium flex items-center gap-1">
                             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                             {rating} & up
                           </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-base font-semibold">Duration</Label>
-                    <div className="space-y-2">
-                      {DURATION_FILTERS.map((duration) => (
-                        <div
-                          key={duration.id}
-                          className={`flex items-center space-x-2 cursor-pointer p-1 rounded ${selectedDuration === duration.id ? "bg-muted/30" : ""}`}
-                          onClick={() => setSelectedDuration(duration.id)}
-                        >
-                          <Checkbox checked={selectedDuration === duration.id} onCheckedChange={() => setSelectedDuration(duration.id)} />
-                          <span className="text-sm font-medium">{duration.label}</span>
                         </div>
                       ))}
                     </div>
@@ -597,7 +514,6 @@ export function CoursesPage() {
                     <p className="text-muted-foreground">
                       No courses match your filters. Try adjusting your search.
                     </p>
-                    <p className="text-muted-foreground">No courses match your filters. Try adjusting your search.</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -614,9 +530,12 @@ export function CoursesPage() {
                         {/* Thumbnail */}
                         <div className="relative overflow-hidden">
                           <img
-                            src={course.thumbnail}
+                            src={getCourseThumbnailUrl(course.thumbnail)}
                             alt={course.title}
                             className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
+                            onError={(e) => {
+                              e.currentTarget.src = getCourseThumbnailUrl(null);
+                            }}
                           />
 
                           {/* ❤️ Wishlist heart — top-left */}
@@ -671,23 +590,14 @@ export function CoursesPage() {
                         </div>
 
                         {/* Card header */}
-                          {course.bestseller && (
-                            <Badge className="absolute top-4 left-4 bg-yellow-500 text-white">Bestseller</Badge>
-                          )}
-                          <Badge variant="secondary" className="absolute top-4 right-4">{course.level}</Badge>
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <Play className="h-16 w-16 text-white" />
-                          </div>
-                        </div>
                         <CardHeader className="flex-1">
                           <CardTitle className="line-clamp-2 text-lg group-hover:text-primary transition-colors">
                             {course.title}
                           </CardTitle>
                           <CardDescription className="flex items-center gap-2">
                             <Avatar className="h-6 w-6">
-                              <AvatarImage src={course.avatar} />
+                              <AvatarImage src={getUserAvatarUrl({ name: course.instructor, avatar: course.avatar })} />
                               <AvatarFallback>{course.instructor?.[0]}</AvatarFallback>
-                              <AvatarFallback>{course.instructor[0]}</AvatarFallback>
                             </Avatar>
                             <span>{course.instructor}</span>
                           </CardDescription>
@@ -710,11 +620,6 @@ export function CoursesPage() {
                                   ? `${(course.students / 1000).toFixed(1)}k`
                                   : course.students || 0}
                               </span>
-                              <span className="text-muted-foreground">({course.reviews?.toLocaleString()})</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Users className="h-4 w-4" />
-                              <span>{(course.students / 1000).toFixed(1)}k</span>
                             </div>
                           </div>
                           <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -769,15 +674,6 @@ export function CoursesPage() {
                               {userState?.enrolledCourses?.includes(course.id) ? "Enrolled" : "Enroll Now"}
                             </Button>
                           </div>
-                        <CardFooter className="flex justify-between items-center border-t pt-4">
-                          <span className="text-2xl font-bold text-primary">{formatPrice(course.price)}</span>
-                          <Button
-                            size="sm"
-                            variant={userState?.enrolledCourses?.includes(course.id) ? "secondary" : "default"}
-                            onClick={() => handleEnroll(course.id)}
-                          >
-                            {userState?.enrolledCourses?.includes(course.id) ? "Enrolled" : "Enroll Now"}
-                          </Button>
                         </CardFooter>
                       </Card>
                     </motion.div>

@@ -3,6 +3,7 @@ const {
   getCourses,
   getCourseById,
   getCategories,
+  createCourse,
   enrollCourse,
   addToWishlist,
   removeFromWishlist,
@@ -14,6 +15,7 @@ const { protect } = require("../middleware/auth");
 const router = express.Router();
 
 router.get("/", getCourses);
+router.post("/", protect, createCourse);
 router.get("/categories/list", getCategories);
 router.get("/enrolled/me", protect, getEnrolledCourses);
 router.get("/wishlist/me", protect, getWishlistCourses);

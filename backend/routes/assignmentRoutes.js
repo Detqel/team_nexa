@@ -19,13 +19,14 @@ router.use(protect);
 // Assignment CRUD
 router.get("/", getAssignments);
 router.post("/", createAssignment);
-router.get("/:id", getAssignmentById);
-router.put("/:id", updateAssignment);
-router.delete("/:id", deleteAssignment);
 
-// Submissions
+// Submissions (must be registered before /:id routes)
 router.get("/:id/submissions", getSubmissions);
 router.post("/:id/submit", submitAssignment);
 router.put("/:assignmentId/submissions/:submissionId/grade", gradeSubmission);
+
+router.get("/:id", getAssignmentById);
+router.put("/:id", updateAssignment);
+router.delete("/:id", deleteAssignment);
 
 module.exports = router;

@@ -1,8 +1,20 @@
 const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
+const fs = require("fs");
+const path = require("path");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const {
+<<<<<<< HEAD
+  AVATAR_UPLOADS_PATH,
+  AVATAR_TOO_LARGE_MESSAGE,
+  INVALID_IMAGE_FORMAT_MESSAGE,
+  MAX_BASE64_AVATAR_LENGTH,
+  isDataImageUrl,
+  isRemoteOrUploadUrl,
+  isStoredUploadAvatar,
+} = require("../constants/avatarConstants");
+=======
   STATUS,
   VALIDATION_MESSAGES,
   AUTH_MESSAGES,
@@ -10,6 +22,7 @@ const {
   FIELD_CONSTRAINTS,
   DEFAULTS,
 } = require("../constants/appConstants");
+>>>>>>> 3c0b5f4a2aa236cbffd9623b6ed80bebba37436f
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -21,16 +34,45 @@ const validate = (req, res, next) => {
   next();
 };
 
+const formatCourseProgress = (courseProgress) => {
+  if (!courseProgress) return {};
+  try {
+    if (courseProgress instanceof Map) {
+      return Object.fromEntries(courseProgress.entries());
+    }
+    if (typeof courseProgress === "object") {
+      return Object.fromEntries(Object.entries(courseProgress));
+    }
+  } catch {
+    return {};
+  }
+  return {};
+};
+
 const formatUser = (user) => ({
-  id: user._id,
+  id: user._id?.toString?.() || String(user._id),
   name: user.name,
   email: user.email,
   role: user.role,
+  avatar: user.avatar || null,
   enrolledCourses: user.enrolledCourses?.map((id) => id.toString()) || [],
   wishlist: user.wishlist?.map((id) => id.toString()) || [],
-  courseProgress: Object.fromEntries(user.courseProgress || new Map()),
+  courseProgress: formatCourseProgress(user.courseProgress),
   createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
 });
+
+const removeAvatarFile = (avatarPath) => {
+  if (!avatarPath) return;
+  try {
+    const filePath = path.join(__dirname, "..", avatarPath.replace(/^\//, ""));
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (err) {
+    console.warn("Could not remove old avatar:", err.message);
+  }
+};
 
 const generateToken = (userId) =>
   jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -136,17 +178,138 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
+const updateProfileValidators = [
+  body("name").optional().trim().notEmpty().withMessage("Name cannot be empty").isLength({ max: 100 }),
+  body("avatar")
+    .optional({ nullable: true })
+    .custom((value) => {
+      if (value === null || value === "") return true;
+      if (typeof value !== "string") throw new Error("Avatar must be a string.");
+      if (isDataImageUrl(value)) {
+        if (value.length > MAX_BASE64_AVATAR_LENGTH) {
+          throw new Error(AVATAR_TOO_LARGE_MESSAGE);
+        }
+        return true;
+      }
+      if (isRemoteOrUploadUrl(value)) {
+        return true;
+      }
+      throw new Error(INVALID_IMAGE_FORMAT_MESSAGE);
+    }),
+];
+
+const applyAvatarUpdate = (user, avatar) => {
+  if (avatar === undefined) return;
+
+  if (avatar === null || avatar === "") {
+    if (isStoredUploadAvatar(user.avatar)) {
+      removeAvatarFile(user.avatar);
+    }
+    user.avatar = undefined;
+    return;
+  }
+
+  if (isStoredUploadAvatar(user.avatar) && avatar !== user.avatar) {
+    removeAvatarFile(user.avatar);
+  }
+
+  user.avatar = avatar;
+};
+
+const updateProfile = async (req, res, next) => {
+  try {
+    const { name, avatar } = req.body;
+
+    if (name !== undefined) {
+      req.user.name = name.trim();
+    }
+
+    applyAvatarUpdate(req.user, avatar);
+
+    await req.user.save();
+
+    const freshUser = await User.findById(req.user._id);
+    if (!freshUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    res.json({
+      message: avatar !== undefined
+        ? "Profile photo updated successfully."
+        : "Profile updated successfully.",
+      user: formatUser(freshUser),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const uploadAvatar = async (req, res, next) => {
+  try {
+    if (isDataImageUrl(req.body?.avatar)) {
+      applyAvatarUpdate(req.user, req.body.avatar);
+      await req.user.save();
+      const freshUser = await User.findById(req.user._id);
+      return res.status(200).json({
+        message: "Profile photo updated successfully.",
+        user: formatUser(freshUser),
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Please upload an image file." });
+    }
+
+    removeAvatarFile(req.user.avatar);
+
+    req.user.avatar = `${AVATAR_UPLOADS_PATH}${req.file.filename}`;
+    await req.user.save();
+
+    const freshUser = await User.findById(req.user._id);
+    if (!freshUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    return res.status(200).json({
+      message: "Profile photo updated successfully.",
+      user: formatUser(freshUser),
+    });
+  } catch (error) {
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {
+        // ignore cleanup errors
+      }
+    }
+    next(error);
+  }
+};
+
+const deleteAvatar = async (req, res, next) => {
+  try {
+    applyAvatarUpdate(req.user, null);
+    await req.user.save();
+
+    res.json({
+      message: "Profile photo removed.",
+      user: formatUser(req.user),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   registerValidators,
   loginValidators,
   updateProfileValidators,
-module.exports = {
-  registerValidators,
-  loginValidators,
   validate,
   register,
   login,
   getMe,
   updateProfile,
+  uploadAvatar,
+  deleteAvatar,
   formatUser,
 };
