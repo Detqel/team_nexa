@@ -1,4 +1,5 @@
 const Course = require("../models/Course");
+const { STATUS, COURSE_MESSAGES, DEFAULTS } = require("../constants/appConstants");
 
 const formatCourse = (course) => ({
   id: course._id.toString(),
@@ -32,7 +33,7 @@ const getCourses = async (req, res, next) => {
       level,
       durationMin,
       durationMax,
-      sort = "title-asc",
+      sort = DEFAULTS.SORT,
     } = req.query;
 
     const filter = {};
@@ -108,7 +109,7 @@ const getCourses = async (req, res, next) => {
 
     const courses = await query.exec();
 
-    res.json({
+    res.status(STATUS.OK).json({
       count: courses.length,
       courses: courses.map(formatCourse),
     });
@@ -121,9 +122,9 @@ const getCourseById = async (req, res, next) => {
   try {
     const course = await Course.findById(req.params.id);
     if (!course) {
-      return res.status(404).json({ message: "Course not found." });
+      return res.status(STATUS.NOT_FOUND).json({ message: COURSE_MESSAGES.NOT_FOUND });
     }
-    res.json({ course: formatCourse(course) });
+    res.status(STATUS.OK).json({ course: formatCourse(course) });
   } catch (error) {
     next(error);
   }
@@ -132,7 +133,7 @@ const getCourseById = async (req, res, next) => {
 const getCategories = async (req, res, next) => {
   try {
     const categories = await Course.distinct("category");
-    res.json({ categories });
+    res.status(STATUS.OK).json({ categories });
   } catch (error) {
     next(error);
   }
@@ -142,12 +143,12 @@ const enrollCourse = async (req, res, next) => {
   try {
     const course = await Course.findById(req.params.id);
     if (!course) {
-      return res.status(404).json({ message: "Course not found." });
+      return res.status(STATUS.NOT_FOUND).json({ message: COURSE_MESSAGES.NOT_FOUND });
     }
 
     const user = req.user;
     if (user.enrolledCourses.some((id) => id.toString() === course._id.toString())) {
-      return res.status(400).json({ message: "You are already enrolled in this course." });
+      return res.status(STATUS.BAD_REQUEST).json({ message: COURSE_MESSAGES.ALREADY_ENROLLED });
     }
 
     user.enrolledCourses.push(course._id);
@@ -156,8 +157,8 @@ const enrollCourse = async (req, res, next) => {
     }
     await user.save();
 
-    res.json({
-      message: "Successfully enrolled in course.",
+    res.status(STATUS.OK).json({
+      message: COURSE_MESSAGES.ENROLL_SUCCESS,
       enrolledCourses: user.enrolledCourses.map((id) => id.toString()),
       courseProgress: Object.fromEntries(user.courseProgress),
     });
@@ -170,19 +171,19 @@ const addToWishlist = async (req, res, next) => {
   try {
     const course = await Course.findById(req.params.id);
     if (!course) {
-      return res.status(404).json({ message: "Course not found." });
+      return res.status(STATUS.NOT_FOUND).json({ message: COURSE_MESSAGES.NOT_FOUND });
     }
 
     const user = req.user;
     if (user.wishlist.some((id) => id.toString() === course._id.toString())) {
-      return res.status(400).json({ message: "Course is already in your wishlist." });
+      return res.status(STATUS.BAD_REQUEST).json({ message: COURSE_MESSAGES.WISHLIST_DUPLICATE });
     }
 
     user.wishlist.push(course._id);
     await user.save();
 
-    res.json({
-      message: "Added to wishlist.",
+    res.status(STATUS.OK).json({
+      message: COURSE_MESSAGES.WISHLIST_ADDED,
       wishlist: user.wishlist.map((id) => id.toString()),
     });
   } catch (error) {
@@ -196,8 +197,8 @@ const removeFromWishlist = async (req, res, next) => {
     user.wishlist = user.wishlist.filter((id) => id.toString() !== req.params.id);
     await user.save();
 
-    res.json({
-      message: "Removed from wishlist.",
+    res.status(STATUS.OK).json({
+      message: COURSE_MESSAGES.WISHLIST_REMOVED,
       wishlist: user.wishlist.map((id) => id.toString()),
     });
   } catch (error) {
@@ -212,7 +213,7 @@ const getEnrolledCourses = async (req, res, next) => {
       ...formatCourse(course),
       progress: user.courseProgress.get(course._id.toString()) || 0,
     }));
-    res.json({ courses });
+    res.status(STATUS.OK).json({ courses });
   } catch (error) {
     next(error);
   }
@@ -221,7 +222,7 @@ const getEnrolledCourses = async (req, res, next) => {
 const getWishlistCourses = async (req, res, next) => {
   try {
     const user = await req.user.populate("wishlist");
-    res.json({ courses: user.wishlist.map(formatCourse) });
+    res.status(STATUS.OK).json({ courses: user.wishlist.map(formatCourse) });
   } catch (error) {
     next(error);
   }
