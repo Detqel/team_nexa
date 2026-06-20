@@ -11,6 +11,7 @@ import {
   LogOut,
   GraduationCap,
   Home,
+  FileText,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -29,11 +30,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
 import { getUser, logout } from "../lib/auth";
+import { getUserAvatarUrl, getUserInitials } from "../lib/avatar";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: User, label: "Profile", href: "/dashboard/profile" },
   { icon: BookOpen, label: "My Courses", href: "/dashboard/my-courses" },
+  { icon: FileText, label: "Assignments", href: "/dashboard/assignments" },
   { icon: Heart, label: "Wishlist", href: "/dashboard/wishlist" },
   { icon: MessageSquare, label: "Messages", href: "/dashboard/messages" },
   { icon: Bell, label: "Notifications", href: "/dashboard/notifications" },
@@ -53,8 +56,8 @@ export function DashboardHeader({ title, description, action }) {
       <div className="flex items-center gap-3">
         {action}
         <Avatar className="h-10 w-10 ring-2 ring-primary/20">
-          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "student"}`} />
-          <AvatarFallback>{user?.name?.[0] || "U"}</AvatarFallback>
+          <AvatarImage src={getUserAvatarUrl(user)} alt={user?.name || "User"} />
+          <AvatarFallback>{getUserInitials(user)}</AvatarFallback>
         </Avatar>
         <div className="text-right text-sm text-muted-foreground">
           <p className="font-medium text-foreground">{user?.name || "Student"}</p>

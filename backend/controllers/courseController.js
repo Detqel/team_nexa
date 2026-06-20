@@ -227,10 +227,59 @@ const getWishlistCourses = async (req, res, next) => {
   }
 };
 
+const createCourse = async (req, res, next) => {
+  try {
+    if (req.user.role !== "instructor") {
+      return res.status(403).json({ message: "Only instructors can create courses." });
+    }
+
+    const {
+      title,
+      description,
+      category,
+      level,
+      thumbnail,
+      price,
+      originalPrice,
+      durationHours,
+      lessons,
+    } = req.body;
+
+    if (!title?.trim() || !description?.trim() || !category?.trim() || !level) {
+      return res.status(400).json({
+        message: "title, description, category, and level are required.",
+      });
+    }
+
+    const course = await Course.create({
+      title: title.trim(),
+      description: description.trim(),
+      category: category.trim(),
+      level,
+      thumbnail: thumbnail || "",
+      instructor: req.user.name,
+      avatar: req.user.avatar || "",
+      price: Number(price) || 0,
+      originalPrice: originalPrice ? Number(originalPrice) : undefined,
+      durationHours: Number(durationHours) || 0,
+      lessons: Number(lessons) || 0,
+      status: "published",
+    });
+
+    res.status(201).json({
+      message: "Course created successfully.",
+      course: formatCourse(course),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getCourses,
   getCourseById,
   getCategories,
+  createCourse,
   enrollCourse,
   addToWishlist,
   removeFromWishlist,

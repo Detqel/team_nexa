@@ -1,15 +1,13 @@
-import { useState } from "react";
-import { motion } from "motion/react";
+import { useState, useEffect } from "react";
 import {
-  Settings, User, Bell, Lock, CreditCard, Globe, Eye, EyeOff,
-  Camera, Save, Trash2, Shield, Smartphone,
+  User, Bell, Lock, CreditCard, Globe, Eye, EyeOff,
+  Save, Trash2, Shield, Smartphone,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Switch } from "../components/ui/switch";
 import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
@@ -22,20 +20,57 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "../components/ui/alert-dialog";
 import { InstructorLayout } from "../components/instructor-sidebar";
+import { ProfilePhotoUpload } from "../components/profile-photo-upload";
+import { getUser, updateStoredUser } from "../lib/auth";
+import { authApi } from "../lib/api";
+import { toast } from "sonner";
+
+function splitName(fullName = "") {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
+
+function joinName(firstName, lastName) {
+  return [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
+}
+
+function profileFromUser(user) {
+  const { firstName, lastName } = splitName(user?.name || "");
+  return {
+    firstName,
+    lastName,
+    email: user?.email || "",
+    phone: "",
+    bio: "",
+    title: "",
+    website: "",
+    twitter: "",
+    linkedin: "",
+    language: "en",
+    timezone: "Asia/Kolkata",
+  };
+}
+
+function formatMemberSince(date) {
+  if (!date) return "—";
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export function InstructorSettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => getUser());
 
-  const [profile, setProfile] = useState({
-    firstName: "Michael", lastName: "Chen",
-    email: "michael.chen@example.com", phone: "+1 (555) 123-4567",
-    bio: "Senior full-stack developer and educator with 10+ years of experience. Passionate about making complex concepts easy to understand.",
-    title: "Senior Full-Stack Developer & Educator",
-    website: "https://michaelchen.dev", twitter: "@michaelchen", linkedin: "linkedin.com/in/michaelchen",
-    language: "en", timezone: "Asia/Kolkata",
-  });
+  const [profile, setProfile] = useState(() => profileFromUser(getUser()));
 
   const [notifications, setNotifications] = useState({
     newEnrollment: true, newReview: true, assignmentSubmission: true,
@@ -48,9 +83,45 @@ export function InstructorSettingsPage() {
     ifsc: "HDFC0001234", nextPayout: "June 15, 2026", payoutFrequency: "Monthly",
   });
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  useEffect(() => {
+    authApi
+      .getMe()
+      .then((data) => {
+        updateStoredUser(data.user);
+        setUser(data.user);
+        setProfile(profileFromUser(data.user));
+      })
+      .catch(() => {
+        const localUser = getUser();
+        if (localUser) {
+          setUser(localUser);
+          setProfile(profileFromUser(localUser));
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    const name = joinName(profile.firstName, profile.lastName);
+    if (!name) {
+      toast.error("Please enter your name.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const data = await authApi.updateProfile({ name });
+      updateStoredUser(data.user);
+      setUser(data.user);
+      setProfile(profileFromUser(data.user));
+      setSaved(true);
+      toast.success("Profile updated successfully!");
+      setTimeout(() => setSaved(false), 2500);
+    } catch (error) {
+      toast.error(error.message || "Failed to save profile.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const set = (key, val) => setProfile((p) => ({ ...p, [key]: val }));
@@ -74,29 +145,32 @@ export function InstructorSettingsPage() {
 
           {/* Profile Tab */}
           <TabsContent value="profile">
+            {loading ? (
+              <p className="text-sm text-muted-foreground text-center py-12">Loading profile...</p>
+            ) : (
             <div className="space-y-6">
+              <Card>
+                <CardHeader><CardTitle>Account Overview</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Account type</p>
+                    <Badge variant="secondary" className="mt-1 capitalize">{user?.role || "instructor"}</Badge>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Member since</p>
+                    <p className="font-medium mt-1">{formatMemberSince(user?.createdAt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Email</p>
+                    <p className="font-medium mt-1 break-all">{user?.email || "—"}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader><CardTitle>Profile Photo</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-6">
-                    <div className="relative">
-                      <Avatar className="h-20 w-20 ring-4 ring-primary/20">
-                        <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=michael" />
-                        <AvatarFallback>MC</AvatarFallback>
-                      </Avatar>
-                      <Button size="icon" className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full" variant="secondary">
-                        <Camera className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    <div>
-                      <p className="font-medium">Profile Photo</p>
-                      <p className="text-sm text-muted-foreground mb-3">PNG, JPG up to 5MB recommended 400×400px</p>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm"><Camera className="h-3.5 w-3.5 mr-1" />Upload</Button>
-                        <Button variant="ghost" size="sm" className="text-destructive">Remove</Button>
-                      </div>
-                    </div>
-                  </div>
+                  <ProfilePhotoUpload user={user} onUserUpdated={setUser} />
                 </CardContent>
               </Card>
 
@@ -125,7 +199,8 @@ export function InstructorSettingsPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Email Address</Label>
-                      <Input value={profile.email} onChange={(e) => set("email", e.target.value)} />
+                      <Input value={profile.email} disabled />
+                      <p className="text-xs text-muted-foreground">Email is linked to your login account.</p>
                     </div>
                     <div className="space-y-2">
                       <Label>Phone Number</Label>
@@ -181,10 +256,15 @@ export function InstructorSettingsPage() {
                 </CardContent>
               </Card>
 
-              <Button onClick={handleSave} className={`w-full ${saved ? "bg-green-500 hover:bg-green-600" : "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"}`}>
-                {saved ? "✓ Saved Successfully!" : <><Save className="h-4 w-4 mr-2" />Save Changes</>}
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className={`w-full ${saved ? "bg-green-500 hover:bg-green-600" : "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"}`}
+              >
+                {saved ? "✓ Saved Successfully!" : <><Save className="h-4 w-4 mr-2" />{saving ? "Saving..." : "Save Changes"}</>}
               </Button>
             </div>
+            )}
           </TabsContent>
 
           {/* Notifications Tab */}

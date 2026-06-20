@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema(
       enum: ["student", "instructor"],
       default: "student",
     },
+    avatar: {
+      type: String,
+      trim: true,
+    },
     enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: "Course" }],
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Course" }],
     courseProgress: {

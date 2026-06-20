@@ -22,8 +22,10 @@ import { StudentsPage } from "./pages/instructor-students";
 import { AnalyticsPage } from "./pages/instructor-analytics";
 import { EarningsPage } from "./pages/instructor-earnings";
 import { AssignmentsPage } from "./pages/instructor-assignments";
+import { StudentAssignmentsPage } from "./pages/student-assignments";
 import { QuizManagementPage } from "./pages/instructor-quiz";
 import { InstructorSettingsPage } from "./pages/instructor-settings";
+import { InstructorProfilePage } from "./pages/instructor-profile";
 import { MessagesPage } from "./pages/messages";
 import { NotificationsPage } from "./pages/notifications";
 import { SettingsPage } from "./pages/settings";
@@ -64,6 +66,7 @@ export default function App() {
           <Route path="/dashboard/messages" element={<RequireAuth><MessagesPage /></RequireAuth>} />
           <Route path="/dashboard/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
           <Route path="/dashboard/certificates" element={<RequireAuth><CertificatesPage /></RequireAuth>} />
+          <Route path="/dashboard/assignments" element={<RequireAuth><StudentAssignmentsPage /></RequireAuth>} />
           <Route path="/dashboard/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
           <Route path="/dashboard/*" element={<RequireAuth><StudentDashboard /></RequireAuth>} />
 
@@ -77,6 +80,7 @@ export default function App() {
           <Route path="/instructor-dashboard/assignments" element={<RequireAuth><AssignmentsPage /></RequireAuth>} />
           <Route path="/instructor-dashboard/quiz" element={<RequireAuth><QuizManagementPage /></RequireAuth>} />
           <Route path="/instructor-dashboard/settings" element={<RequireAuth><InstructorSettingsPage /></RequireAuth>} />
+          <Route path="/instructor-dashboard/profile" element={<RequireAuth><InstructorProfilePage /></RequireAuth>} />
           <Route path="/instructor-dashboard/my-courses" element={<RequireAuth><MyCoursesPage /></RequireAuth>} />
           <Route path="/instructor-dashboard/wishlist" element={<RequireAuth><WishlistPage /></RequireAuth>} />
           <Route path="/instructor-dashboard/certificates" element={<RequireAuth><CertificatesPage /></RequireAuth>} />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "motion/react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -19,6 +19,13 @@ import { Separator } from "../components/ui/separator";
 import { Switch } from "../components/ui/switch";
 import { InstructorLayout } from "../components/instructor-sidebar";
 import { Progress } from "../components/ui/progress";
+import { getUser } from "../lib/auth";
+import { getUserAvatarUrl } from "../lib/avatar";
+import { coursesApi } from "../lib/api";
+import { resizeImageToDataUrl } from "../lib/images";
+import { toast } from "sonner";
+
+const PUBLISHED_COURSES_KEY = "nexa_published_courses";
 
 const steps = [
   { id: 1, label: "Basic Info", icon: FileText },
@@ -30,7 +37,10 @@ const steps = [
 
 export function CreateCoursePage() {
   const navigate = useNavigate();
+  const thumbnailInputRef = useRef(null);
   const [step, setStep] = useState(1);
+  const [publishing, setPublishing] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
   const [form, setForm] = useState({
     title: "", subtitle: "", description: "", category: "", level: "", language: "English",
     tags: [], tagInput: "",
@@ -96,6 +106,77 @@ export function CreateCoursePage() {
       return;
     }
     setStep((s) => Math.min(steps.length, s + 1));
+  };
+
+  const handleThumbnailChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file.");
+      return;
+    }
+
+    setUploadingThumbnail(true);
+    try {
+      const dataUrl = await resizeImageToDataUrl(file, 1280, 720, 0.85);
+      set("thumbnail", dataUrl);
+      toast.success("Thumbnail uploaded!");
+    } catch (error) {
+      toast.error(error.message || "Failed to upload thumbnail.");
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    const user = getUser();
+    if (!user) {
+      toast.error("Please log in to publish a course.");
+      return;
+    }
+
+    if (!isStepComplete(1) || !isStepComplete(2) || !isStepComplete(3) || !isStepComplete(4)) {
+      toast.error("Please complete all required steps before publishing.");
+      return;
+    }
+
+    const totalLessons = form.sections.reduce((sum, section) => sum + section.lessons.length, 0);
+
+    setPublishing(true);
+    try {
+      const payload = {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        category: form.category,
+        level: form.level,
+        thumbnail: form.thumbnail,
+        price: form.isFree ? 0 : Number(form.price) || 0,
+        originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
+        durationHours: Math.max(1, Math.ceil(totalLessons * 0.5)),
+        lessons: totalLessons,
+      };
+
+      const data = await coursesApi.create(payload);
+      const course = {
+        ...data.course,
+        instructor: user.name,
+        avatar: getUserAvatarUrl(user),
+        publishedAt: new Date().toISOString(),
+        totalLessons,
+      };
+
+      const existing = JSON.parse(localStorage.getItem(PUBLISHED_COURSES_KEY) || "[]");
+      localStorage.setItem(PUBLISHED_COURSES_KEY, JSON.stringify([course, ...existing]));
+
+      toast.success("Course published successfully!");
+      navigate("/courses");
+    } catch (error) {
+      toast.error(error.message || "Failed to publish course.");
+    } finally {
+      setPublishing(false);
+    }
   };
 
   return (
@@ -273,11 +354,43 @@ export function CreateCoursePage() {
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label>Course Thumbnail *</Label>
-                  <div className="border-2 border-dashed rounded-xl p-8 text-center hover:bg-muted/30 transition-colors cursor-pointer">
-                    <Image className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                    <p className="font-medium mb-1">Click to upload thumbnail</p>
-                    <p className="text-sm text-muted-foreground">PNG, JPG up to 2MB • Recommended: 1280×720px</p>
-                    <Button variant="outline" className="mt-3"><Upload className="h-4 w-4 mr-2" />Choose Image</Button>
+                  <input
+                    ref={thumbnailInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="hidden"
+                    onChange={handleThumbnailChange}
+                  />
+                  <div
+                    className="border-2 border-dashed rounded-xl p-8 text-center hover:bg-muted/30 transition-colors cursor-pointer"
+                    onClick={() => thumbnailInputRef.current?.click()}
+                  >
+                    {form.thumbnail ? (
+                      <img
+                        src={form.thumbnail}
+                        alt="Course thumbnail preview"
+                        className="mx-auto mb-3 max-h-40 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <Image className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                    )}
+                    <p className="font-medium mb-1">
+                      {uploadingThumbnail ? "Uploading..." : "Click to upload thumbnail"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">PNG, JPG up to 5MB • Recommended: 1280×720px</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-3"
+                      disabled={uploadingThumbnail}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        thumbnailInputRef.current?.click();
+                      }}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {form.thumbnail ? "Change Image" : "Choose Image"}
+                    </Button>
                   </div>
                 </div>
                 <Separator />
@@ -382,8 +495,12 @@ export function CreateCoursePage() {
                 ))}
                 <div className="flex gap-3 pt-2">
                   <Button variant="outline" className="flex-1">Save as Draft</Button>
-                  <Button className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700" onClick={() => navigate("/instructor-dashboard/courses")}>
-                    🚀 Publish Course
+                  <Button
+                    className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                    onClick={handlePublish}
+                    disabled={publishing}
+                  >
+                    {publishing ? "Publishing..." : "🚀 Publish Course"}
                   </Button>
                 </div>
               </CardContent>
