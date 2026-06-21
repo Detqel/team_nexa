@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # NexaLearn - Premium Learning Management System
 
 A modern, responsive Learning Management System (LMS) built with React, TypeScript, Tailwind CSS, and Framer Motion. NexaLearn provides a complete platform for online education with student, instructor, and admin dashboards.
@@ -280,6 +279,3 @@ For questions or feedback about NexaLearn, please reach out through the contact 
 ---
 
 Built with ❤️ using React, Tailwind CSS, and Framer Motion
-=======
-# team_nexa
->>>>>>> e9a26973e96ae1cbb1abc36732f5f9551a02d6fa

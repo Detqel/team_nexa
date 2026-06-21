@@ -5,7 +5,6 @@ const path = require("path");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const {
-<<<<<<< HEAD
   AVATAR_UPLOADS_PATH,
   AVATAR_TOO_LARGE_MESSAGE,
   INVALID_IMAGE_FORMAT_MESSAGE,
@@ -14,7 +13,7 @@ const {
   isRemoteOrUploadUrl,
   isStoredUploadAvatar,
 } = require("../constants/avatarConstants");
-=======
+const {
   STATUS,
   VALIDATION_MESSAGES,
   AUTH_MESSAGES,
@@ -22,7 +21,6 @@ const {
   FIELD_CONSTRAINTS,
   DEFAULTS,
 } = require("../constants/appConstants");
->>>>>>> 3c0b5f4a2aa236cbffd9623b6ed80bebba37436f
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -153,29 +151,6 @@ const login = async (req, res, next) => {
 
 const getMe = async (req, res) => {
   res.status(STATUS.OK).json({ user: formatUser(req.user) });
-};
-
-const updateProfileValidators = [
-  body("name").optional().trim().notEmpty().withMessage("Name cannot be empty").isLength({ max: 100 }),
-];
-
-const updateProfile = async (req, res, next) => {
-  try {
-    const { name } = req.body;
-
-    if (name !== undefined) {
-      req.user.name = name.trim();
-    }
-
-    await req.user.save();
-
-    res.json({
-      message: "Profile updated successfully.",
-      user: formatUser(req.user),
-    });
-  } catch (error) {
-    next(error);
-  }
 };
 
 const updateProfileValidators = [
